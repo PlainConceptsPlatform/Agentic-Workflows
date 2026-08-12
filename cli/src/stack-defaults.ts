@@ -56,6 +56,7 @@ export function generateOpencodeCi(
   let result = baseContent;
 
   if (inspection.stackHints.solutionFiles.length > 0) {
+    const solutionPath = inspection.stackHints.solutionFiles[0]!;
     const nugetSteps = `  - name: Cache NuGet packages
     uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
     with:
@@ -63,8 +64,8 @@ export function generateOpencodeCi(
       key: nuget-\${{ runner.os }}-\${{ hashFiles('**/*.slnx', '**/Directory.Packages.props') }}
       restore-keys: nuget-\${{ runner.os }}-
 
-  - name: Restore .NET dependencies
-    run: dotnet restore
+   - name: Restore .NET dependencies
+    run: dotnet restore ${solutionPath}
 `;
 
     result = insertBeforeMarker(result, nugetSteps, "  - name: Install workspace dependencies");
