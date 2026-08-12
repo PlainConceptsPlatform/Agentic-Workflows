@@ -292,6 +292,19 @@ describe("catalog installation", () => {
     await expect(readFile(join(repositoryPath, "opencode.ci.json"), "utf8")).resolves.toBe("{ \"model\": \"plainconcepts/glm-5-2\" }\n");
   });
 
+  it("installs the .NET and Next.js CI template as app-ci.yml", async () => {
+    const sourcePath = await createDirectory({
+      "templates/ci/app-ci-dotnet-next.yml": "name: App: CI\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    await expect(installTemplate(repositoryPath, "app-ci-dotnet-next", { sourcePath })).resolves.toEqual({
+      installed: [".github/workflows/app-ci.yml"],
+      conflicts: [],
+    });
+    await expect(readFile(join(repositoryPath, ".github/workflows/app-ci.yml"), "utf8")).resolves.toBe("name: App: CI\n");
+  });
+
   it("requires force to replace the opencode.ci.json template", async () => {
     const sourcePath = await createDirectory({
       "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",

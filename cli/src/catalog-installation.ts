@@ -211,7 +211,9 @@ function catalogTemplateMeta(template: TemplateName): { directory: string; file:
   if (entry === undefined) throw new Error(`Unknown template: ${template}`);
   const directory = template.startsWith("opencode") ? "opencode" : template.startsWith("app-ci-") ? "ci" : "agentics";
   const isWorkflow = entry.file.endsWith(".yml");
-  const target = isWorkflow ? `.github/workflows/${entry.file}` : entry.file;
+  const target = template === "app-ci-dotnet-next"
+    ? ".github/workflows/app-ci.yml"
+    : isWorkflow ? `.github/workflows/${entry.file}` : entry.file;
   return { directory, file: entry.file, target };
 }
 
