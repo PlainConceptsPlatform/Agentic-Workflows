@@ -37,6 +37,14 @@ export const packageOwnedTargets = [
 
 export const generatedConsumerTargets = [
   ".github/workflows/agent-*.lock.yml",
-  ".github/workflows/agentics-maintenance.yml",
   ".github/aw/actions-lock.json",
 ] as const;
+
+export const templateNames = [
+  "agentics-checks",
+  "agentics-maintenance",
+  "app-ci-dotnet-next",
+  "app-ci-node-monorepo",
+] as const;
+
+export type TemplateName = (typeof templateNames)[number];

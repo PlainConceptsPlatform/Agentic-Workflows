@@ -3,6 +3,8 @@ import { constants } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { templateNames, type TemplateName } from "./workflow-catalog.js";
+
 export interface CatalogInstallResult {
   readonly installed: readonly string[];
   readonly conflicts: readonly string[];
@@ -51,6 +53,32 @@ export async function installCatalog(
   }));
 
   return { installed: files.map((file) => file.target), conflicts };
+}
+
+export async function installTemplate(
+  repositoryPath: string,
+  template: TemplateName,
+  options: CatalogInstallOptions = {},
+): Promise<CatalogInstallResult> {
+  const sourcePath = options.sourcePath ?? catalogSourcePath();
+  const source = join(sourcePath, "templates", templateDirectory(template), `${template}.yml`);
+  const target = `.github/workflows/${template}.yml`;
+  const destination = join(repositoryPath, target);
+  const conflicts = await exists(destination) && !(await filesMatch(source, destination)) ? [target] : [];
+
+  if (conflicts.length > 0 && !options.force) return { installed: [], conflicts };
+
+  await mkdir(dirname(destination), { recursive: true });
+  await copyFile(source, destination);
+  return { installed: [target], conflicts };
+}
+
+export function isTemplateName(value: string): value is TemplateName {
+  return templateNames.includes(value as TemplateName);
+}
+
+function templateDirectory(template: TemplateName): "agentics" | "ci" {
+  return template.startsWith("app-ci-") ? "ci" : "agentics";
 }
 
 async function catalogFiles(sourcePath: string): Promise<CatalogFile[]> {

@@ -22,6 +22,7 @@ Use for changes under `cli/`.
 - `add` and `update` manage package-owned actions, workflows, and compile script.
 - Detect differing package-managed targets as conflicts. Return them without writes unless `--force` is explicit.
 - Exclude generated `*.lock.yml` and `actions-lock.json` from package copying. Consumers compile their own locks.
+- Preserve ownership headers while copying. They warn that `update --force` can overwrite package-managed consumer edits.
 
 ## Package and release
 

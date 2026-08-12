@@ -24,6 +24,7 @@ Use for changes under `loops/`.
 - Use `safe-outputs` for agent mutations. Workflow jobs own labels and cleanup.
 - Preserve direct-route behavior: bot never removes `direct`; a human removes it. Human replies on a `direct` issue continue the conversation. Agents do not manage labels.
 - Keep generated `*.lock.yml` and `actions-lock.json` out of this repository.
+- Every installable source file needs an ownership header naming `@plainconceptsplatform/workflows`, its `loops/` path, and `platform-workflows update --force`. YAML starts with `#`; worker Markdown keeps `---` first and places its header at frontmatter line 2; shell headers follow any shebang.
 
 ## Validate
 

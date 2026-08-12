@@ -4,6 +4,7 @@ import {
   generatedConsumerTargets,
   packageOwnedTargets,
   routeNames,
+  templateNames,
   workflowRoutes,
 } from "./workflow-catalog.js";
 
@@ -19,5 +20,9 @@ describe("workflow catalog", () => {
     for (const target of generatedConsumerTargets) {
       expect(packageTargets.has(target)).toBe(false);
     }
+  });
+
+  it("lists supported optional templates", () => {
+    expect(templateNames).toEqual(["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo"]);
   });
 });

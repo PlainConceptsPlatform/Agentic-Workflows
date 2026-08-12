@@ -1,5 +1,7 @@
 ---
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-propose.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
 env:
+  REPO_RULES: "Propose one focused product candidate from repository evidence and curated radar. Respect documented goals and non-goals, reject duplicates and rejected ideas, favor one-pull-request reversible work."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   PROPOSED_LABEL: proposed
   IMPLEMENT_LABEL: implement

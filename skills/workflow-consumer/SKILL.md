@@ -28,6 +28,7 @@ pnpm exec platform-workflows update
 ```
 
 `add` and `update` stop on changed package-managed files. Inspect conflicts first; use `--force` only to intentionally replace package-owned files.
+Package-managed files carry ownership headers with their source path. `update --force` can overwrite consumer edits to them.
 
 ## Manual layout
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { inspectRepository, parseVisibility, resolveVisibility } from "./repository-inspection.js";
-import { installCatalog } from "./catalog-installation.js";
+import { installCatalog, installTemplate, isTemplateName } from "./catalog-installation.js";
+import type { TemplateName } from "./workflow-catalog.js";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,7 +10,7 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
   const [command, ...options] = arguments_;
 
   if (command === "--help" || command === "-h" || command === undefined) {
-    console.log("Usage: platform-workflows <init|add|update|status> [--visibility public|private] [--force]");
+    console.log("Usage: platform-workflows <init|add|update|status> [--visibility public|private] [--template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo] [--force]");
     return 0;
   }
 
@@ -29,9 +30,13 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
   }
 
   if (command === "add" || command === "update") {
-    if (options.some((option) => option !== "--force")) return fail(`${command} accepts only --force.`);
-    const result = await installCatalog(repositoryPath, { force: options.includes("--force") });
-    if (result.conflicts.length > 0 && !options.includes("--force")) {
+    const template = readTemplateOption(options);
+    if (template === "invalid") return fail(`${command} accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo.`);
+    const force = options.includes("--force");
+    const result = template === undefined
+      ? await installCatalog(repositoryPath, { force })
+      : await installTemplate(repositoryPath, template, { force });
+    if (result.conflicts.length > 0 && !force) {
       console.error(`Catalog conflicts found. Re-run with --force to overwrite package-managed files:\n${result.conflicts.join("\n")}`);
       return 1;
     }
@@ -46,6 +51,18 @@ function readVisibilityOption(options: readonly string[]): "invalid" | "public" 
   if (options.length === 0) return undefined;
   if (options.length !== 2 || options[0] !== "--visibility") return "invalid";
   return parseVisibility(options[1]) ?? "invalid";
+}
+
+function readTemplateOption(options: readonly string[]): "invalid" | TemplateName | undefined {
+  const templateIndex = options.indexOf("--template");
+  if (templateIndex === -1) return options.every((option) => option === "--force") ? undefined : "invalid";
+  if (templateIndex + 1 >= options.length || options.filter((option) => option === "--template").length !== 1) return "invalid";
+  if (options.some((option, index) => option !== "--force" && index !== templateIndex && index !== templateIndex + 1)) return "invalid";
+  return templateNameFromOptions(options[templateIndex + 1]);
+}
+
+function templateNameFromOptions(value: string | undefined): "invalid" | TemplateName {
+  return value !== undefined && isTemplateName(value) ? value : "invalid";
 }
 
 function fail(message: string): number {

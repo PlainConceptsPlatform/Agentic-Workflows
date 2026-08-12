@@ -1,4 +1,5 @@
 ---
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/shared/opencode-ci.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
 env:
   AGENTMEMORY_VERSION: "0.9.28"
   CODEGRAPH_VERSION: "1.5.0"

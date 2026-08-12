@@ -1,3 +1,4 @@
+// Managed by @plainconceptsplatform/workflows. Source: loops/scripts/compile-agent-workflows.mjs. Update with `platform-workflows update --force`; consumer edits may be overwritten.
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 

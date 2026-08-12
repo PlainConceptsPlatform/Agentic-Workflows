@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { catalogSourcePath, installCatalog } from "./catalog-installation.js";
+import { catalogSourcePath, installCatalog, installTemplate } from "./catalog-installation.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -42,6 +42,24 @@ describe("catalog installation", () => {
       ],
       conflicts: [],
     });
+  });
+
+  it("copies ownership headers for base workflows and selected templates", async () => {
+    const header = "# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-check.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.\n";
+    const templateHeader = "# Managed by @plainconceptsplatform/workflows. Source: loops/templates/agentics/agentics-checks.yml. Update with `platform-workflows update --force`; consumer edits may be overwritten.\n";
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "# Managed by @plainconceptsplatform/workflows. Source: loops/actions/check/action.yml. Update with `platform-workflows update --force`; consumer edits may be overwritten.\nname: Check\n",
+      "workflows/agent-check.md": `---\n${header}# Check\n`,
+      "scripts/compile.mjs": "// Managed by @plainconceptsplatform/workflows. Source: loops/scripts/compile.mjs. Update with `platform-workflows update --force`; consumer edits may be overwritten.\n",
+      "templates/agentics/agentics-checks.yml": `${templateHeader}name: Agentics checks\n`,
+    });
+    const repositoryPath = await createDirectory({});
+
+    await installCatalog(repositoryPath, { sourcePath });
+    await installTemplate(repositoryPath, "agentics-checks", { sourcePath });
+
+    await expect(readFile(join(repositoryPath, ".github/workflows/agent-check.md"), "utf8")).resolves.toMatch(new RegExp(`^---\\n${escapeRegularExpression(header)}`));
+    await expect(readFile(join(repositoryPath, ".github/workflows/agentics-checks.yml"), "utf8")).resolves.toMatch(new RegExp(`^${escapeRegularExpression(templateHeader)}`));
   });
 
   it("does not report identical managed files as conflicts", async () => {
@@ -106,6 +124,45 @@ describe("catalog installation", () => {
     });
     await expect(readFile(join(repositoryPath, ".github/actions/check/action.yml"), "utf8")).resolves.toBe("package action\n");
   });
+
+  it("installs templates only when explicitly selected", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "name: Check\n",
+      "workflows/agent-check.md": "# Check\n",
+      "scripts/compile.mjs": "compile\n",
+      "templates/agentics/agentics-checks.yml": "name: Agentics checks\n",
+      "templates/ci/app-ci-node-monorepo.yml": "name: Node CI\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    await installCatalog(repositoryPath, { sourcePath });
+    await expect(readFile(join(repositoryPath, ".github/workflows/agentics-checks.yml"), "utf8")).rejects.toThrow();
+    await expect(installTemplate(repositoryPath, "agentics-checks", { sourcePath })).resolves.toEqual({
+      installed: [".github/workflows/agentics-checks.yml"],
+      conflicts: [],
+    });
+    await expect(installTemplate(repositoryPath, "app-ci-node-monorepo", { sourcePath })).resolves.toEqual({
+      installed: [".github/workflows/app-ci-node-monorepo.yml"],
+      conflicts: [],
+    });
+  });
+
+  it("requires force to replace a selected template", async () => {
+    const sourcePath = await createDirectory({
+      "templates/agentics/agentics-checks.yml": "package template\n",
+    });
+    const repositoryPath = await createDirectory({
+      ".github/workflows/agentics-checks.yml": "consumer template\n",
+    });
+
+    await expect(installTemplate(repositoryPath, "agentics-checks", { sourcePath })).resolves.toEqual({
+      installed: [],
+      conflicts: [".github/workflows/agentics-checks.yml"],
+    });
+    await expect(installTemplate(repositoryPath, "agentics-checks", { force: true, sourcePath })).resolves.toMatchObject({
+      installed: [".github/workflows/agentics-checks.yml"],
+    });
+  });
 });
 
 async function createDirectory(files: Record<string, string>): Promise<string> {
@@ -118,4 +175,8 @@ async function createDirectory(files: Record<string, string>): Promise<string> {
     await writeFile(path, content, "utf8");
   }));
   return directory;
+}
+
+function escapeRegularExpression(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

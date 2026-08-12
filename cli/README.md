@@ -26,6 +26,8 @@ pnpm exec platform-workflows add
 
 `add` installs package-owned files. It stops when a managed file differs. Use `pnpm exec platform-workflows update --force` only when you intend to replace managed workflow files.
 
+Install optional standalone templates with `add --template`. Available templates are `agentics-checks`, `agentics-maintenance`, `app-ci-dotnet-next`, and `app-ci-node-monorepo`. CI templates are stack-specific copies, not a combined template. Edit their top-level `env:` values for repository paths, package names, and commands.
+
 ## Manual installation
 
 The package includes `loops/`, a copyable equivalent of `.github/`:

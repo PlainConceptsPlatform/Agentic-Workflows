@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Managed by @plainconceptsplatform/workflows. Source: loops/actions/validate-refine-output/validate-refine-output.sh. Update with `platform-workflows update --force`; consumer edits may be overwritten.
 # Print the deterministic Refine outcome: complete, questions, or invalid.
 
 set -euo pipefail

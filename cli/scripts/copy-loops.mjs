@@ -7,4 +7,7 @@ const source = resolve(cliDirectory, "..", "loops");
 const destination = resolve(cliDirectory, "loops");
 
 await rm(destination, { force: true, recursive: true });
-await cp(source, destination, { recursive: true });
+await cp(source, destination, {
+  filter: (path) => !path.endsWith(".lock.yml") && !path.endsWith("actions-lock.json"),
+  recursive: true,
+});

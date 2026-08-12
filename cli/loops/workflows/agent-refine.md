@@ -1,5 +1,7 @@
 ---
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-refine.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
 env:
+  REPO_RULES: "Refine only selected issue into a grounded, implementation-ready user story. Read repository documentation and relevant code; ask concise business questions when requirements remain unclear. Do not change files."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   REFINE_LABEL: refine
   REFINED_LABEL: refined

@@ -1,5 +1,7 @@
 ---
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-implement.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
 env:
+  REPO_RULES: "Implement only selected issue. Follow repository documentation and existing conventions; run pnpm verify; fix root cause; do not weaken checks or change unrelated files."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   IMPLEMENT_LABEL: implement
   WORKING_LABEL: bot-working

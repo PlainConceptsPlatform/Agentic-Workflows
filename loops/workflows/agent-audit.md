@@ -1,5 +1,7 @@
 ---
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-audit.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
 env:
+  REPO_RULES: "Read-only audit. Report only reproducible, actionable defects with evidence; do not modify files, commit, push, or recommend weakened security, tests, or checks."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   AUDIT_MARKER: "<!-- agent-audit -->"
   GIT_AUTHOR_NAME: "github-actions[bot]"
