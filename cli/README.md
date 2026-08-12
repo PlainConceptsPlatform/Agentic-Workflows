@@ -9,9 +9,9 @@ Before installing workflows, install and configure [`PlainConceptsPlatform/openc
 For one-off use, prefer:
 
 ```bash
-npx @plainconceptsplatform/workflows@latest platform-workflows init
-npx @plainconceptsplatform/workflows@latest platform-workflows add
-npx @plainconceptsplatform/workflows@latest platform-workflows update
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows init
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows add
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows update
 ```
 
 For a project-local development dependency:
@@ -22,9 +22,9 @@ pnpm exec platform-workflows init
 pnpm exec platform-workflows add
 ```
 
-`init` detects the repository stack and visibility, creates `.github/workflows/shared/repo-config.md` when absent, and records managed workflow state. Complete the consumer configuration before compiling workflows.
+`init` inspects the repository and reports its stack and visibility. It does not create or manage repository configuration or a manifest.
 
-`add` installs missing package-owned files. It stops when a managed file differs. Use `pnpm exec platform-workflows update --force` only when you intend to replace managed workflow files. It never overwrites `repo-config.md`.
+`add` installs package-owned files. It stops when a managed file differs. Use `pnpm exec platform-workflows update --force` only when you intend to replace managed workflow files.
 
 ## Manual installation
 
@@ -32,10 +32,10 @@ The package includes `loops/`, a copyable equivalent of `.github/`:
 
 - `loops/actions/` maps to `.github/actions/`
 - `loops/workflows/` maps to `.github/workflows/`
-- `loops/aw/repo-config.md` maps to `.github/workflows/shared/repo-config.md`
 - `loops/scripts/` maps to `scripts/`
 
-Copy these files manually if you do not use the CLI. Keep `repo-config.md` consumer-owned.
+Copy these files manually if you do not use the CLI. Each worker is self-contained. Edit its
+top-level `env:` defaults directly for consumer-specific endpoint, model, labels, paths, and checks.
 
 ## Compile
 

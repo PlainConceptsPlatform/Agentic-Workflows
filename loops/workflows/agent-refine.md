@@ -1,5 +1,6 @@
 ---
 env:
+  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   REFINE_LABEL: refine
   REFINED_LABEL: refined
   WORKING_LABEL: bot-working
@@ -33,7 +34,6 @@ name: "Agent: Refine Issue"
 imports:
   - shared/platform-defaults.md
   - shared/opencode-ci.md
-  - shared/repo-config.md
 
 on:
   workflow_call:
@@ -225,7 +225,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
+    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
   args:
     - "--model"
     - "plainconcepts/glm-5-2"
@@ -273,11 +273,7 @@ timeout-minutes: 30
    Given/When/Then acceptance criteria, the edge cases, and a Mermaid diagram where one
    genuinely helps.
 
-   Apply repository-specific requirements before finalizing the story:
-
-   ```
-    ${{ env.REPO_RULES }}
-   ```
+    Apply repository documentation and established conventions before finalizing the story.
 
  4. Load `@humanizer` and prepare the complete replacement issue body as valid Markdown.
 

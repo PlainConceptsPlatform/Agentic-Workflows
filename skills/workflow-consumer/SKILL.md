@@ -14,9 +14,9 @@ Before installing workflows, install and configure `PlainConceptsPlatform/openco
 For one-off use, run:
 
 ```sh
-npx @plainconceptsplatform/workflows@latest platform-workflows init
-npx @plainconceptsplatform/workflows@latest platform-workflows add
-npx @plainconceptsplatform/workflows@latest platform-workflows update
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows init
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows add
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows update
 ```
 
 For a project-local development dependency, install it with `pnpm add -D @plainconceptsplatform/workflows`, then run:
@@ -36,13 +36,13 @@ Copy `loops/` as consumer `.github/` equivalents:
 - `loops/actions/` to `.github/actions/`
 - `loops/workflows/` to `.github/workflows/`
 - `loops/scripts/compile-agent-workflows.mjs` to `scripts/`
-- `loops/aw/repo-config.md` to `.github/workflows/shared/repo-config.md`, only when absent
 
-Keep repository-specific configuration in `.github/workflows/shared/repo-config.md`. Do not overwrite it during manual copies, installation, or updates.
+Each worker is standalone. Edit its top-level `env:` values directly after copying when the
+consumer needs different endpoint, model, labels, paths, verification commands, or prompt rules.
 
 ## Configure and compile
 
-Set repository visibility, trusted actors, CI and branches, enabled routes and schedules, setup/network access, verification commands, and agent rules in repo config.
+Set repository visibility, trusted actors, CI and branches, enabled routes and schedules, setup/network access, verification commands, and agent rules in copied worker frontmatter and workflow source. Each worker's `OPENAI_BASE_URL` defaults to `https://forge.plainconcepts.com/v1`. OpenCode workers retain their engine endpoint because `gh aw` routes them through its runtime proxy.
 
 In consumer repository, run:
 

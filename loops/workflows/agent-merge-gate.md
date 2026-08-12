@@ -1,5 +1,6 @@
 ---
 env:
+  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   WORKING_LABEL: bot-working
   IMPLEMENT_LABEL: implement
   REVIEW_LABEL: review
@@ -25,7 +26,6 @@ name: "Agent: Merge Gate"
 imports:
   - shared/platform-defaults.md
   - shared/opencode-ci.md
-  - shared/repo-config.md
 
 on:
   workflow_call:
@@ -287,7 +287,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
+    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
 
 model: openai/glm-5-2
 
@@ -375,11 +375,8 @@ timeout-minutes: 60
      then `add_labels` to add `review` (item_number: the issue), and stop.
       A cancelled or unknown run is not evidence of anything.
 
-   Apply these repository-specific rules when assessing or remediating the pull request:
-
-   ```
-    ${{ env.REPO_RULES }}
-   ```
+    Follow repository documentation and established conventions when assessing or remediating
+    the pull request. Protect secrets, do not bypass checks, and keep remediation focused.
 
 4. Assess the risk of merging, as a reviewer would. Read `/tmp/gh-aw/agent/diff.patch` in full
    and `/tmp/gh-aw/agent/pr.json` for the shape of the change. Flag it as risky when any of
@@ -415,9 +412,9 @@ timeout-minutes: 60
     fix the actual cause. Run these verification commands before a push. Do not weaken a test,
     disable a check, or push an unverified guess.
 
-    ```
-    ${{ env.VERIFY_COMMANDS }}
-    ```
+     ```
+     pnpm verify
+     ```
 
    Call `push_to_pull_request_branch` (pr_number: ${{ needs.subject.outputs.pr }}) to push
    the fix, then `remove_labels` (item_number: ${{ needs.subject.outputs.issue }}) to remove

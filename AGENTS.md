@@ -4,6 +4,7 @@
 
 - This repository provides reusable GitHub Actions workflow loops and an optional CLI.
 - Consumer repositories own their `.github/` configuration. Treat this repository's `loops/` content as the equivalent workflow source.
+- Workers are standalone and copyable. Consumer-specific values belong in each worker's top-level `env:` frontmatter, never in a shared repository configuration file.
 - Do not edit consumer repository configuration from here unless the task explicitly targets that repository.
 
 ## Workflow and CLI work
@@ -16,7 +17,7 @@
 
 - Consumer repositories must install and configure `PlainConceptsPlatform/opencode-onboard` before using or compiling loops. Loop workers invoke the skills and commands it provides.
 - Before compilation, verify the required `opencode-onboard` skills and commands are available in the consumer repository.
-- For one-off consumer CLI use, recommend `npx @plainconceptsplatform/workflows@latest platform-workflows <init|add|update>`.
+- For one-off consumer CLI use, recommend `npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows <init|add|update>`.
 - `pnpm exec platform-workflows <init|add|update>` is optional only when `@plainconceptsplatform/workflows` is installed as a project-local development dependency.
 
 ## Generated files

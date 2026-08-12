@@ -1,5 +1,6 @@
 ---
 env:
+  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   WORKING_LABEL: bot-working
   REVIEW_LABEL: review
   DIRECT_LABEL: direct
@@ -25,7 +26,6 @@ name: "Agent: Direct"
 imports:
   - shared/platform-defaults.md
   - shared/opencode-ci.md
-  - shared/repo-config.md
 
 on:
   workflow_call:
@@ -186,7 +186,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
+    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
 
 model: openai/glm-5-2
 
@@ -275,14 +275,11 @@ timeout-minutes: 180
 6. Verify before you conclude, if you changed code. From the repository root:
 
     ```
-    ${{ env.VERIFY_COMMANDS }}
+    pnpm verify
     ```
 
-    Follow these repository-specific rules:
-
-    ```
-    ${{ env.REPO_RULES }}
-    ```
+    Follow repository documentation and established conventions. Keep changes focused,
+    protect secrets, do not bypass checks, and do not modify generated files unless the instruction requires it.
 
     If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
     a check to make it pass.

@@ -1,5 +1,6 @@
 ---
 env:
+  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   AUDIT_MARKER: "<!-- agent-audit -->"
   GIT_AUTHOR_NAME: "github-actions[bot]"
   GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
@@ -24,7 +25,6 @@ name: "Agent: Audit"
 imports:
   - shared/platform-defaults.md
   - shared/opencode-ci.md
-  - shared/repo-config.md
 
 on:
   workflow_call:
@@ -50,7 +50,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
+    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
 
 model: openai/glm-5-2
 
@@ -121,11 +121,8 @@ timeout-minutes: 45
 1. Call skill("ob-repo-audit"), then run `/repo-audit` as a read-only audit of this
    repository. Do not modify any file, do not commit, and do not push.
 
- 2. Apply these repository-specific rules while auditing:
-
-    ```
-    ${{ env.REPO_RULES }}
-    ```
+  2. Apply repository documentation and established conventions while auditing. Focus on
+     concrete defects and avoid recommendations that weaken security, tests, or checks.
 
     From the audit report, find **5 to 7 problems**. For each finding, verify it meets ALL
    of these criteria before keeping it:

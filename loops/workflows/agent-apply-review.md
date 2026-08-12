@@ -1,5 +1,6 @@
 ---
 env:
+  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   WORKING_LABEL: bot-working
   REVIEW_LABEL: review
   REVIEW_MARKER: "<!-- agent-apply-review -->"
@@ -23,7 +24,6 @@ name: "Agent: Apply Review"
 imports:
   - shared/platform-defaults.md
   - shared/opencode-ci.md
-  - shared/repo-config.md
 
 on:
   workflow_call:
@@ -220,7 +220,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
+    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
 
 model: openai/glm-5-2
 
@@ -312,19 +312,16 @@ timeout-minutes: 45
 
  5. Load only skills required by the feedback, then apply it. Make only changes the feedback
     justifies: a review comment is not licence for unrelated refactoring. Never read outside this
-    repository root. Follow these repository-specific rules:
-
-    ```
-    ${{ env.REPO_RULES }}
-    ```
+     repository root. Follow repository documentation and established conventions. Keep changes
+     focused, protect secrets, and do not modify generated files unless the feedback requires it.
 
  6. Run the repository verification commands below. The issue context at
     `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria the fix must satisfy. If a check
     fails, fix what you broke and run it again. Do not push a branch that does not pass.
 
-    ```
-    ${{ env.VERIFY_COMMANDS }}
-    ```
+     ```
+     pnpm verify
+     ```
 
 7. Call `push_to_pull_request_branch` to push the verified changes. Do not merge, do not
    close anything, and do not change any label other than `bot-working`.

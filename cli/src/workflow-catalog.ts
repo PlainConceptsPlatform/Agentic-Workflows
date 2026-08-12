@@ -35,24 +35,8 @@ export const packageOwnedTargets = [
   "scripts/compile-agent-workflows.mjs",
 ] as const;
 
-export const consumerOwnedTargets = [
-  ".github/workflows/shared/repo-config.md",
-] as const;
-
 export const generatedConsumerTargets = [
   ".github/workflows/agent-*.lock.yml",
   ".github/workflows/agentics-maintenance.yml",
   ".github/aw/actions-lock.json",
 ] as const;
-
-export interface RepositoryConfigTemplate {
-  readonly repositoryVisibility: "private" | "public";
-  readonly verificationCommands: readonly string[];
-  readonly repositoryRules: readonly string[];
-}
-
-export const defaultRepositoryConfig: RepositoryConfigTemplate = {
-  repositoryVisibility: "private",
-  verificationCommands: [],
-  repositoryRules: [],
-};

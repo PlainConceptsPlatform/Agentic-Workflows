@@ -2,7 +2,6 @@
 
 import { inspectRepository, parseVisibility, resolveVisibility } from "./repository-inspection.js";
 import { installCatalog } from "./catalog-installation.js";
-import { initializeRepository, readManifest, repositoryConfigRelativePath } from "./repository-state.js";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,15 +18,13 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
     if (visibility === "invalid") return fail("--visibility must be public or private.");
     const inspection = await inspectRepository(repositoryPath);
     const resolvedVisibility = await resolveVisibility(repositoryPath, visibility);
-    const result = await initializeRepository(inspection, resolvedVisibility);
-    console.log(JSON.stringify({ command, ...result }, null, 2));
+    console.log(JSON.stringify({ command, inspection, visibility: resolvedVisibility }, null, 2));
     return 0;
   }
 
   if (command === "status") {
     const inspection = await inspectRepository(repositoryPath);
-    const manifest = await readManifest(repositoryPath);
-    console.log(JSON.stringify({ command, inspection, manifest, repositoryConfigPath: repositoryConfigRelativePath }, null, 2));
+    console.log(JSON.stringify({ command, inspection }, null, 2));
     return 0;
   }
 

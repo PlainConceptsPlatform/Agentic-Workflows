@@ -3,8 +3,6 @@ import { constants } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { repositoryConfigRelativePath } from "./repository-state.js";
-
 export interface CatalogInstallResult {
   readonly installed: readonly string[];
   readonly conflicts: readonly string[];
@@ -69,11 +67,6 @@ async function catalogFiles(sourcePath: string): Promise<CatalogFile[]> {
     }
   }
 
-  const repositoryConfigSource = join(sourcePath, "aw", "repo-config.md");
-  if (await exists(repositoryConfigSource)) {
-    files.push({ source: repositoryConfigSource, target: repositoryConfigRelativePath, managed: false });
-  }
-
   return files.sort((left, right) => left.target.localeCompare(right.target));
 }
 
@@ -106,5 +99,3 @@ async function exists(path: string): Promise<boolean> {
     return false;
   }
 }
-
-export { repositoryConfigRelativePath };

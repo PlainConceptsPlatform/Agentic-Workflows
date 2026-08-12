@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { catalogSourcePath, installCatalog, repositoryConfigRelativePath } from "./catalog-installation.js";
+import { catalogSourcePath, installCatalog } from "./catalog-installation.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -22,13 +22,12 @@ describe("catalog installation", () => {
     expect(catalogSourcePath(join(packageDirectory, "dist", "catalog-installation.js"))).toBe(join(packageDirectory, "loops"));
   });
 
-  it("installs package-owned loops files and initializes repository config", async () => {
+  it("installs package-owned loops files", async () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",
       "workflows/agent-check.md": "# Check\n",
       "workflows/shared/defaults.md": "defaults\n",
       "scripts/compile.mjs": "console.log('compile');\n",
-      "aw/repo-config.md": "# Repository configuration\n",
       "workflows/agent-check.lock.yml": "generated\n",
       "actions/actions-lock.json": "generated\n",
     });
@@ -39,12 +38,10 @@ describe("catalog installation", () => {
         ".github/actions/check/action.yml",
         ".github/workflows/agent-check.md",
         ".github/workflows/shared/defaults.md",
-        repositoryConfigRelativePath,
         "scripts/compile.mjs",
       ],
       conflicts: [],
     });
-    await expect(readFile(join(repositoryPath, repositoryConfigRelativePath), "utf8")).resolves.toBe("# Repository configuration\n");
   });
 
   it("does not report identical managed files as conflicts", async () => {
@@ -58,18 +55,37 @@ describe("catalog installation", () => {
     await expect(installCatalog(repositoryPath, { sourcePath })).resolves.toMatchObject({ conflicts: [] });
   });
 
-  it("requires force for different managed files and preserves repository config", async () => {
+  it("does not manage legacy repository configuration files", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "name: Check\n",
+      "workflows/agent-check.md": "# Check\n",
+      "scripts/compile.mjs": "compile\n",
+    });
+    const repositoryPath = await createDirectory({
+      ".github/workflows/shared/repo-config.md": "legacy consumer config\n",
+    });
+
+    await expect(installCatalog(repositoryPath, { sourcePath })).resolves.toMatchObject({
+      installed: [
+        ".github/actions/check/action.yml",
+        ".github/workflows/agent-check.md",
+        "scripts/compile.mjs",
+      ],
+      conflicts: [],
+    });
+    await expect(readFile(join(repositoryPath, ".github/workflows/shared/repo-config.md"), "utf8")).resolves.toBe("legacy consumer config\n");
+  });
+
+  it("requires force for different managed files", async () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "package action\n",
       "workflows/agent-check.md": "package workflow\n",
       "scripts/compile.mjs": "package script\n",
-      "aw/repo-config.md": "package config\n",
     });
     const repositoryPath = await createDirectory({
       ".github/actions/check/action.yml": "consumer action\n",
       ".github/workflows/agent-check.md": "consumer workflow\n",
       "scripts/compile.mjs": "consumer script\n",
-      [repositoryConfigRelativePath]: "consumer config\n",
     });
 
     await expect(installCatalog(repositoryPath, { sourcePath })).resolves.toEqual({
@@ -89,7 +105,6 @@ describe("catalog installation", () => {
       ],
     });
     await expect(readFile(join(repositoryPath, ".github/actions/check/action.yml"), "utf8")).resolves.toBe("package action\n");
-    await expect(readFile(join(repositoryPath, repositoryConfigRelativePath), "utf8")).resolves.toBe("consumer config\n");
   });
 });
 

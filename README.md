@@ -4,7 +4,7 @@ Source repository for Platform GitHub agentic workflows and the `@plainconceptsp
 
 ## Layout
 
-- `loops/`: copyable workflow source, arranged like a consumer `.github/`: `actions/` for composite actions, `aw/` for Agentic Workflows support, `workflows/` for workers, shared imports, and router, and `scripts/` for compilation.
+- `loops/`: standalone copyable workflow source, arranged like a consumer `.github/`: `actions/` for composite actions, `workflows/` for workers, shared imports, and router, and `scripts/` for compilation.
 - `cli/`: TypeScript installer and updater.
 - `docs/`: ownership and consumer guidance.
 - `skills/`: workflow-author and workflow-consumer skills.
@@ -18,9 +18,12 @@ Before installing or compiling these workflows, consumer repositories should ins
 For one-off CLI use:
 
 ```bash
-npx @plainconceptsplatform/workflows@latest platform-workflows init
-npx @plainconceptsplatform/workflows@latest platform-workflows add
-npx @plainconceptsplatform/workflows@latest platform-workflows update
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows init
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows add
+npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows update
 ```
 
 For a project-local development dependency, install `@plainconceptsplatform/workflows` and run `pnpm exec platform-workflows <init|add|update>`.
+
+Each worker declares its defaults in top-level `env:` frontmatter. Copy consumers edit those
+values directly when their endpoint, model, labels, paths, or baseline verification command differs.

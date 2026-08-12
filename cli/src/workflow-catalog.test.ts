@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  consumerOwnedTargets,
   generatedConsumerTargets,
   packageOwnedTargets,
   routeNames,
@@ -14,10 +13,10 @@ describe("workflow catalog", () => {
     expect(new Set(workflowRoutes.map((route) => route.worker)).size).toBe(workflowRoutes.length);
   });
 
-  it("keeps generated and consumer-owned files outside package ownership", () => {
+  it("keeps generated files outside package ownership", () => {
     const packageTargets = new Set<string>(packageOwnedTargets);
 
-    for (const target of [...consumerOwnedTargets, ...generatedConsumerTargets]) {
+    for (const target of generatedConsumerTargets) {
       expect(packageTargets.has(target)).toBe(false);
     }
   });

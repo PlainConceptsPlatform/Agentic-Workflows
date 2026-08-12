@@ -1,11 +1,10 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { inspectRepository, resolveVisibility, type CommandRunner } from "./repository-inspection.js";
-import { initializeRepository, manifestRelativePath, readManifest, repositoryConfigRelativePath } from "./repository-state.js";
 import { run } from "./index.js";
 
 const temporaryDirectories: string[] = [];
@@ -51,35 +50,14 @@ describe("repository inspection", () => {
   });
 });
 
-describe("repository initialization", () => {
-  it("creates config once and updates the managed manifest", async () => {
-    const repositoryPath = await createRepository({ "package.json": "{}" });
-    const inspection = await inspectRepository(repositoryPath);
-    const first = await initializeRepository(inspection, { value: "public", source: "argument" }, new Date("2026-08-12T00:00:00.000Z"));
-    const configPath = join(repositoryPath, repositoryConfigRelativePath);
-
-    await writeFile(configPath, "consumer settings\n", "utf8");
-    const second = await initializeRepository(inspection, { value: "private", source: "fallback" }, new Date("2026-08-13T00:00:00.000Z"));
-
-    expect(first.repositoryConfigCreated).toBe(true);
-    expect(second.repositoryConfigCreated).toBe(false);
-    await expect(readFile(configPath, "utf8")).resolves.toBe("consumer settings\n");
-    await expect(readManifest(repositoryPath)).resolves.toMatchObject({
-      initializedAt: "2026-08-13T00:00:00.000Z",
-      visibility: "private",
-      visibilitySource: "fallback",
-    });
-    await expect(readFile(join(repositoryPath, manifestRelativePath), "utf8")).resolves.toContain('"schemaVersion": 1');
-  });
-});
-
 describe("CLI commands", () => {
-  it("keeps init available", async () => {
+  it("keeps init available without writing configuration", async () => {
     const repositoryPath = await createRepository({ "package.json": "{}" });
     const output = captureConsole("log");
 
     await expect(run(["init", "--visibility", "public"], repositoryPath)).resolves.toBe(0);
     expect(output.calls).toHaveLength(1);
+    await expect(import("node:fs/promises").then(({ access }) => access(join(repositoryPath, ".github/workflows/shared/repo-config.md")))).rejects.toThrow();
     output.restore();
   });
 

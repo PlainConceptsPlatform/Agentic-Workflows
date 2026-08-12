@@ -1,5 +1,6 @@
 ---
 env:
+  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   IMPLEMENT_LABEL: implement
   WORKING_LABEL: bot-working
   REVIEW_LABEL: review
@@ -28,7 +29,6 @@ name: "Agent: Implement Issue"
 imports:
   - shared/platform-defaults.md
   - shared/opencode-ci.md
-  - shared/repo-config.md
 
 on:
   workflow_call:
@@ -190,7 +190,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
+    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
 
 model: openai/glm-5-2
 
@@ -250,16 +250,13 @@ timeout-minutes: 90
       `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria that the pipeline must
       satisfy.
 
-    e. Follow these repository-specific rules:
-
-       ```
-        ${{ env.REPO_RULES }}
-       ```
+    e. Follow repository documentation and established conventions. Keep changes focused,
+       protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
 
 4. Verify before you conclude. From the repository root:
 
     ```
-    ${{ env.VERIFY_COMMANDS }}
+    pnpm verify
     ```
 
     If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
