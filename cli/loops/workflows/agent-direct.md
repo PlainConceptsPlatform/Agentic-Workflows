@@ -1,7 +1,7 @@
 ---
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-direct.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
-  REPO_RULES: "Execute selected issue's latest human instruction. Keep scope to requested outcome; follow repository documentation and conventions; verify code changes with pnpm verify; choose documented safe-output outcome."
+  REPO_RULES: "Execute the selected issue's latest human instruction exactly as asked. Follow repository documentation and existing patterns. Keep scope to the requested outcome."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   WORKING_LABEL: bot-working
   REVIEW_LABEL: review
@@ -276,15 +276,16 @@ timeout-minutes: 180
 
 6. Verify before you conclude, if you changed code. From the repository root:
 
-    ```
-    pnpm verify
-    ```
+     ```
+     ${{ env.VERIFY_COMMANDS }}
+     ```
 
-    Follow repository documentation and established conventions. Keep changes focused,
-    protect secrets, do not bypass checks, and do not modify generated files unless the instruction requires it.
+     Follow repository documentation and established conventions. Keep changes focused,
+     protect secrets, do not bypass checks, and do not modify generated files unless the instruction requires it.
+     Adhere to ${{ env.REPO_RULES }}.
 
-    If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
-    a check to make it pass.
+     If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
+     a check to make it pass.
 
 7. You **must** call at least one `safeoutputs/` tool before finishing, or the workflow
    reports a failure. All safe-output tools are on the `safeoutputs` MCP server. Call

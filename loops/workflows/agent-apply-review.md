@@ -1,7 +1,7 @@
 ---
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-apply-review.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
-  REPO_RULES: "Apply only actionable outstanding reviewer feedback to selected bot pull request. Preserve accepted behavior and scope; verify with pnpm verify; do not refactor unrelated code."
+  REPO_RULES: "Apply only actionable outstanding reviewer feedback to the selected bot pull request. Make minimal changes that address each comment. Preserve architecture and do not weaken tests. Run full verification after changes."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   WORKING_LABEL: bot-working
   REVIEW_LABEL: review
@@ -316,13 +316,14 @@ timeout-minutes: 45
     justifies: a review comment is not licence for unrelated refactoring. Never read outside this
      repository root. Follow repository documentation and established conventions. Keep changes
      focused, protect secrets, and do not modify generated files unless the feedback requires it.
+     Adhere to ${{ env.REPO_RULES }}.
 
  6. Run the repository verification commands below. The issue context at
     `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria the fix must satisfy. If a check
     fails, fix what you broke and run it again. Do not push a branch that does not pass.
 
      ```
-     pnpm verify
+     ${{ env.VERIFY_COMMANDS }}
      ```
 
 7. Call `push_to_pull_request_branch` to push the verified changes. Do not merge, do not

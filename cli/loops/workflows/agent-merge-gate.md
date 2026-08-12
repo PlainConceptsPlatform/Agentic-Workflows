@@ -1,7 +1,7 @@
 ---
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-merge-gate.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
-  REPO_RULES: "Make risk-based decision for selected bot pull request. Merge only clean successful CI; flag security, API, workflow, protected-file, test, scope, or confidence risks; remediate only failed CI root cause and verify."
+  REPO_RULES: "Make a risk-based merge decision for the selected bot pull request. Merge only when CI is green and no risk indicators are present. Flag security, schema, auth, or calculation changes for human review. Do not merge protected file changes."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   WORKING_LABEL: bot-working
   IMPLEMENT_LABEL: implement
@@ -377,8 +377,9 @@ timeout-minutes: 60
      then `add_labels` to add `review` (item_number: the issue), and stop.
       A cancelled or unknown run is not evidence of anything.
 
-    Follow repository documentation and established conventions when assessing or remediating
-    the pull request. Protect secrets, do not bypass checks, and keep remediation focused.
+     Follow repository documentation and established conventions when assessing or remediating
+     the pull request. Protect secrets, do not bypass checks, and keep remediation focused.
+     Adhere to ${{ env.REPO_RULES }}.
 
 4. Assess the risk of merging, as a reviewer would. Read `/tmp/gh-aw/agent/diff.patch` in full
    and `/tmp/gh-aw/agent/pr.json` for the shape of the change. Flag it as risky when any of
@@ -415,7 +416,7 @@ timeout-minutes: 60
     disable a check, or push an unverified guess.
 
      ```
-     pnpm verify
+     ${{ env.VERIFY_COMMANDS }}
      ```
 
    Call `push_to_pull_request_branch` (pr_number: ${{ needs.subject.outputs.pr }}) to push

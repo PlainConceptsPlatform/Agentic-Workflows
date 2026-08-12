@@ -1,7 +1,7 @@
 ---
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-implement.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
-  REPO_RULES: "Implement only selected issue. Follow repository documentation and existing conventions; run pnpm verify; fix root cause; do not weaken checks or change unrelated files."
+  REPO_RULES: "Implement only the selected issue. Follow repository documentation and existing conventions. Do not weaken tests, lower coverage thresholds, or bypass checks. Run the project's full verification suite before creating a pull request."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   IMPLEMENT_LABEL: implement
   WORKING_LABEL: bot-working
@@ -252,14 +252,15 @@ timeout-minutes: 90
       `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria that the pipeline must
       satisfy.
 
-    e. Follow repository documentation and established conventions. Keep changes focused,
-       protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
+     e. Follow repository documentation and established conventions. Keep changes focused,
+        protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
+        Adhere to ${{ env.REPO_RULES }}.
 
 4. Verify before you conclude. From the repository root:
 
-    ```
-    pnpm verify
-    ```
+     ```
+     ${{ env.VERIFY_COMMANDS }}
+     ```
 
     If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
     a check to make it pass.

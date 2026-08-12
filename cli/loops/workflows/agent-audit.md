@@ -1,7 +1,7 @@
 ---
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-audit.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
-  REPO_RULES: "Read-only audit. Report only reproducible, actionable defects with evidence; do not modify files, commit, push, or recommend weakened security, tests, or checks."
+  REPO_RULES: "Read-only repository audit. Report only reproducible, actionable defects with evidence. Look for: architectural layer violations, missing tests, security gaps, performance issues, and documentation drift. Do not modify files, commit, push, or run write operations."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   AUDIT_MARKER: "<!-- agent-audit -->"
   GIT_AUTHOR_NAME: "github-actions[bot]"
@@ -125,6 +125,7 @@ timeout-minutes: 45
 
   2. Apply repository documentation and established conventions while auditing. Focus on
      concrete defects and avoid recommendations that weaken security, tests, or checks.
+     Adhere to ${{ env.REPO_RULES }}.
 
     From the audit report, find **5 to 7 problems**. For each finding, verify it meets ALL
    of these criteria before keeping it:

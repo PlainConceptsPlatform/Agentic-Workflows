@@ -1,7 +1,7 @@
 ---
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-refine.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
-  REPO_RULES: "Refine only selected issue into a grounded, implementation-ready user story. Read repository documentation and relevant code; ask concise business questions when requirements remain unclear. Do not change files."
+  REPO_RULES: "Refine only the selected issue into a grounded, implementation-ready user story. Read repository documentation for domain context. Write acceptance criteria that match existing patterns. Do not implement code."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   REFINE_LABEL: refine
   REFINED_LABEL: refined
@@ -275,7 +275,8 @@ timeout-minutes: 30
    Given/When/Then acceptance criteria, the edge cases, and a Mermaid diagram where one
    genuinely helps.
 
-    Apply repository documentation and established conventions before finalizing the story.
+     Apply repository documentation and established conventions before finalizing the story.
+     Adhere to ${{ env.REPO_RULES }}.
 
  4. Load `@humanizer` and prepare the complete replacement issue body as valid Markdown.
 

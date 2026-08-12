@@ -13,6 +13,10 @@ description: |
   shared baseline in the consumer copy. The merge step below is package-owned and required
   for the agent to resolve the `plainconcepts` provider and its models.
 
+# Consumer repositories should add stack-specific steps (NuGet cache, dotnet restore,
+# OpenSpec, Playwright, etc.) after the shared baseline. The merge step at the end is
+# package-owned and required for the agent to resolve its provider and models. Do not
+# remove it.
 pre-agent-steps:
   - name: Create agent scratch directory
     run: mkdir -p .opencode/.tmp

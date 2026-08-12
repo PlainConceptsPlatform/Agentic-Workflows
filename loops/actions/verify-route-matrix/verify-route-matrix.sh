@@ -6,9 +6,9 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROUTER_YML="${HERE}/../../router/work-router.yml"
-IMPLEMENT_WORKER_MD="${HERE}/../../agent-implement.md"
-MERGE_GATE_WORKER_MD="${HERE}/../../agent-merge-gate.md"
+ROUTER_YML="${HERE}/../../workflows/work-router.yml"
+IMPLEMENT_WORKER_MD="${HERE}/../../workflows/agent-implement.md"
+MERGE_GATE_WORKER_MD="${HERE}/../../workflows/agent-merge-gate.md"
 
 # shellcheck source-path=SCRIPTDIR
 # shellcheck source=../classify-route/classify-route.sh
