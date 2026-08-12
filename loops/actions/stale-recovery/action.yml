@@ -215,7 +215,7 @@ runs:
           // whose CI concluded failure and dispatches the merge-gate, which is the same
           // thing the workflow_run trigger would have done. A run already in progress
           // for the same PR is skipped by the router's concurrency group.
-          const ciWorkflow = await github.rest.actions.getRepoWorkflow({
+          const ciWorkflow = await github.rest.actions.getWorkflow({
             ...context.repo,
             workflow_id: CI_WORKFLOW_NAME,
           }).catch(() => null);
@@ -246,7 +246,7 @@ runs:
               );
               if (hasReview.some(Boolean)) continue;
 
-              const routerWorkflow = await github.rest.actions.getRepoWorkflow({
+              const routerWorkflow = await github.rest.actions.getWorkflow({
                 ...context.repo,
                 workflow_id: ROUTER_WORKFLOW_NAME,
               }).catch(() => null);
