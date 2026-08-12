@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { run } from "./index.js";
 
-describe("platform-workflows CLI", () => {
+describe("workflows CLI", () => {
   it("prints template installation in help", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
 

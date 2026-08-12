@@ -10,7 +10,7 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
   const [command, ...options] = arguments_;
 
   if (command === "--help" || command === "-h" || command === undefined) {
-    console.log("Usage: platform-workflows <init|add|update|status> [--visibility public|private] [--template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo] [--force]");
+    console.log("Usage: workflows <init|add|update|status> [--visibility public|private] [--template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo] [--force]");
     return 0;
   }
 
