@@ -1,5 +1,5 @@
 ---
-# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-merge-gate.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-merge-gate.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
   REPO_RULES: "Make risk-based decision for selected bot pull request. Merge only clean successful CI; flag security, API, workflow, protected-file, test, scope, or confidence risks; remediate only failed CI root cause and verify."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1

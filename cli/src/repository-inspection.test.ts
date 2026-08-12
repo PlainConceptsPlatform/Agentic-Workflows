@@ -66,7 +66,7 @@ describe("CLI commands", () => {
     const error = captureConsole("error");
 
     await expect(run(["update", "--invalid"], repositoryPath)).resolves.toBe(1);
-    expect(error.calls).toEqual(["update accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo."]);
+    expect(error.calls).toEqual(["update accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json."]);
     error.restore();
   });
 });
@@ -79,7 +79,7 @@ function captureConsole(method: "error" | "log"): { readonly calls: string[]; re
 }
 
 async function createRepository(files: Record<string, string>): Promise<string> {
-  const repositoryPath = await mkdtemp(join(tmpdir(), "platform-workflows-"));
+  const repositoryPath = await mkdtemp(join(tmpdir(), "workflows-"));
   temporaryDirectories.push(repositoryPath);
   await Promise.all(Object.entries(files).map(async ([relativePath, content]) => {
     const path = join(repositoryPath, relativePath);

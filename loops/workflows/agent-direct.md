@@ -1,5 +1,5 @@
 ---
-# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-direct.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-direct.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
   REPO_RULES: "Execute selected issue's latest human instruction. Keep scope to requested outcome; follow repository documentation and conventions; verify code changes with pnpm verify; choose documented safe-output outcome."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1

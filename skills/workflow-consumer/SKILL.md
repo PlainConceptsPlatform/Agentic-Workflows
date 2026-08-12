@@ -23,9 +23,9 @@ commands exist locally.
 The package bin name is `workflows`. Use one-off invocation exactly as shown:
 
 ```sh
-npx --yes --package @plainconceptsplatform/workflows@latest workflows init
-npx --yes --package @plainconceptsplatform/workflows@latest workflows add
-npx --yes --package @plainconceptsplatform/workflows@latest workflows update
+npx @plainconceptsplatform/workflows@latest init
+npx @plainconceptsplatform/workflows@latest add
+npx @plainconceptsplatform/workflows@latest update
 ```
 
 For a project-local development dependency, install the package first and use:
@@ -49,16 +49,19 @@ Templates are optional and independent of managed loops. Add only the template m
 repository:
 
 ```sh
-npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template agentics-checks
-npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template agentics-maintenance
-npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template app-ci-dotnet-next
-npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template app-ci-node-monorepo
+npx @plainconceptsplatform/workflows@latest add --template agentics-checks
+npx @plainconceptsplatform/workflows@latest add --template agentics-maintenance
+npx @plainconceptsplatform/workflows@latest add --template app-ci-dotnet-next
+npx @plainconceptsplatform/workflows@latest add --template app-ci-node-monorepo
+npx @plainconceptsplatform/workflows@latest add --template opencode.ci.json
 ```
 
 Use `agentics-checks` to validate agentic sources and generated locks in pull requests. Use
 `agentics-maintenance` only when the repository wants the pre-generated gh-aw maintenance workflow.
-Select one CI template only when its technology and commands suit the repository. Templates are copied
-to `.github/workflows/` and consumer-owned after installation.
+Select one CI template only when its technology and commands suit the repository. Use
+`opencode.ci.json` to provide a standalone OpenCode CI configuration for agentic workflow runs in
+CI. Templates are copied to `.github/workflows/` (or the repository root for `opencode.ci.json`)
+and consumer-owned after installation.
 
 Full template selection guidance is in `references/templates.md`.
 

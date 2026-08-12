@@ -1,5 +1,5 @@
 ---
-# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-apply-review.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.
+# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-apply-review.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
   REPO_RULES: "Apply only actionable outstanding reviewer feedback to selected bot pull request. Preserve accepted behavior and scope; verify with pnpm verify; do not refactor unrelated code."
   OPENAI_BASE_URL: https://forge.plainconcepts.com/v1

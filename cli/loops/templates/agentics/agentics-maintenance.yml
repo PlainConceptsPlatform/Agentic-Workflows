@@ -1,4 +1,4 @@
-# Managed by @plainconceptsplatform/workflows. Source: loops/templates/agentics/agentics-maintenance.yml. Update with `platform-workflows update --force`; consumer edits may be overwritten.
+# Managed by @plainconceptsplatform/workflows. Source: loops/templates/agentics/agentics-maintenance.yml. Update with `workflows update --force`; consumer edits may be overwritten.
 # Derived from the gh-aw v0.83.4 maintenance workflow.
 # Copy provenance is documented in docs/ownership.md.
 name: Agentic Maintenance

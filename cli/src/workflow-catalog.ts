@@ -13,17 +13,18 @@ export type RouteName = (typeof routeNames)[number];
 export interface WorkflowRoute {
   readonly name: RouteName;
   readonly worker: string;
+  readonly description: string;
   readonly defaultEnabled: boolean;
 }
 
 export const workflowRoutes: readonly WorkflowRoute[] = [
-  { name: "refine", worker: "agent-refine.md", defaultEnabled: true },
-  { name: "implement", worker: "agent-implement.md", defaultEnabled: true },
-  { name: "direct", worker: "agent-direct.md", defaultEnabled: true },
-  { name: "apply-review", worker: "agent-apply-review.md", defaultEnabled: true },
-  { name: "merge-gate", worker: "agent-merge-gate.md", defaultEnabled: true },
-  { name: "audit", worker: "agent-audit.md", defaultEnabled: true },
-  { name: "propose", worker: "agent-propose.md", defaultEnabled: false },
+  { name: "refine", worker: "agent-refine.md", description: "Refines an issue into a user story, on a first pass or after the author has answered the bot's questions.", defaultEnabled: true },
+  { name: "implement", worker: "agent-implement.md", description: "Implements an issue and opens a pull request. Stops there: the merge decision belongs to the merge gate.", defaultEnabled: true },
+  { name: "direct", worker: "agent-direct.md", description: "Executes a free-form instruction from an issue body and posts the results back on the same issue.", defaultEnabled: true },
+  { name: "apply-review", worker: "agent-apply-review.md", description: "Applies reviewer feedback to an open pull request the bot authored, then pushes the fixes to the same branch.", defaultEnabled: true },
+  { name: "merge-gate", worker: "agent-merge-gate.md", description: "Decides what happens to a bot-authored pull request once CI has reported: merge, hand to a human, or fix CI.", defaultEnabled: true },
+  { name: "audit", worker: "agent-audit.md", description: "Read-only repository audit. Finds 5-7 problems, scores each 1-10, files a single issue with the top 3 refined as actionable user stories.", defaultEnabled: true },
+  { name: "propose", worker: "agent-propose.md", description: "Proposes the next feature. Reads the manifesto, recent history, and comparable tools, scores candidates, and files the winner as a single issue.", defaultEnabled: false },
 ];
 
 export const packageOwnedTargets = [
@@ -45,6 +46,21 @@ export const templateNames = [
   "agentics-maintenance",
   "app-ci-dotnet-next",
   "app-ci-node-monorepo",
+  "opencode.ci.json",
 ] as const;
 
 export type TemplateName = (typeof templateNames)[number];
+
+export interface CatalogTemplate {
+  readonly name: TemplateName;
+  readonly file: string;
+  readonly description: string;
+}
+
+export const catalogTemplates: readonly CatalogTemplate[] = [
+  { name: "agentics-checks", file: "agentics-checks.yml", description: "Agentics checks: verifies generated agent lockfiles, actionlint, and compile on PRs touching workflow files." },
+  { name: "agentics-maintenance", file: "agentics-maintenance.yml", description: "Agentic maintenance: scheduled daily maintenance workflow for keeping workflows and actions up to date." },
+  { name: "app-ci-dotnet-next", file: "app-ci-dotnet-next.yml", description: "App CI pipeline for a .NET + Next.js monorepo: build, test, and lint on PRs and schedule." },
+  { name: "app-ci-node-monorepo", file: "app-ci-node-monorepo.yml", description: "App CI pipeline for a Node monorepo: build, test, and lint on PRs and schedule." },
+  { name: "opencode.ci.json", file: "opencode.ci.json", description: "Standalone OpenCode CI config: plainconcepts provider, GLM model registration, ci-workflow-agent, and LSP defaults for consumer repositories." },
+];

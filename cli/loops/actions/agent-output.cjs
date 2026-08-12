@@ -1,4 +1,4 @@
-// Managed by @plainconceptsplatform/workflows. Source: loops/actions/agent-output.cjs. Update with `platform-workflows update --force`; consumer edits may be overwritten.
+// Managed by @plainconceptsplatform/workflows. Source: loops/actions/agent-output.cjs. Update with `workflows update --force`; consumer edits may be overwritten.
 const fs = require('fs');
 
 // Every apply-agent-* action reads the same artifact the same way: a missing file means the

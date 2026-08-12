@@ -47,7 +47,7 @@ The help string in `cli/src/index.ts` must match the actual bin name `workflows`
 `platform-workflows` name:
 
 ```
-Usage: workflows <init|add|update|status> [--visibility public|private] [--template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo] [--force]
+Usage: workflows <init|add|update|status> [--visibility public|private] [--template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json] [--force]
 ```
 
 ## Consumer contract
@@ -55,7 +55,7 @@ Usage: workflows <init|add|update|status> [--visibility public|private] [--templ
 Recommend one-off use:
 
 ```sh
-npx --yes --package @plainconceptsplatform/workflows@latest workflows <init|add|update>
+npx @plainconceptsplatform/workflows@latest <init|add|update>
 ```
 
 Recommend `pnpm exec workflows <init|add|update>` only after the consumer installs
@@ -85,7 +85,9 @@ The format varies by file type:
 - **JavaScript** (`.cjs`, `.mjs`): first line, starting with `//`
 
 The CLI does not generate headers at install time. Headers are authored in the source files under
-`loops/`. The CLI copies them verbatim.
+`loops/`. The CLI copies them verbatim. JSON files (RFC 8259) cannot contain comments, so
+`opencode.ci.json` documents its ownership header in a companion `opencode.ci.json.md` file
+instead of inline.
 
 ## Managed file detection
 
@@ -107,10 +109,15 @@ compiles its own.
 - `agentics-maintenance`
 - `app-ci-dotnet-next`
 - `app-ci-node-monorepo`
+- `opencode.ci.json`
 
 Template copies are consumer-owned after installation and must not be silently updated as managed
 loops. A second `add --template <name>` on an existing template reports a conflict unless `--force`
 is passed.
+
+Workflow templates (`.yml`) install to `.github/workflows/<name>.yml`. The `opencode.ci.json`
+template installs to the repository root as `opencode.ci.json`, matching the OpenCode CI
+convention used by consumer repositories.
 
 Keep available templates and CLI help aligned with the package payload. The template list in
 `cli/src/workflow-catalog.ts` (`templateNames`) must match the templates physically present in
@@ -126,8 +133,9 @@ The catalog installer maps source directories to consumer destinations:
 | `loops/workflows/` | `.github/workflows/` |
 | `loops/scripts/` | `scripts/` |
 
-Templates are handled separately: `loops/templates/<category>/<name>.yml` to
-`.github/workflows/<name>.yml`.
+Templates are handled separately: `loops/templates/<category>/<name>` to
+`.github/workflows/<name>` for workflow templates (`.yml`) or to the repository root for
+`opencode.ci.json`.
 
 The source path is resolved relative to the installed package's `loops/` directory. In development,
 that is `cli/loops/` (populated by `prepack`). In a published package, it is the `loops/` field in

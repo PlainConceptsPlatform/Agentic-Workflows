@@ -17,7 +17,7 @@
 
 - Consumer repositories must install and configure `PlainConceptsPlatform/opencode-onboard` before using or compiling loops. Loop workers invoke the skills and commands it provides.
 - Before compilation, verify the required `opencode-onboard` skills and commands are available in the consumer repository.
-- For one-off consumer CLI use, recommend `npx --yes --package @plainconceptsplatform/workflows@latest workflows <init|add|update>`.
+- For one-off consumer CLI use, recommend `npx @plainconceptsplatform/workflows@latest <init|add|update>`.
 - `pnpm exec workflows <init|add|update>` is optional only when `@plainconceptsplatform/workflows` is installed as a project-local development dependency.
 
 ## Generated files

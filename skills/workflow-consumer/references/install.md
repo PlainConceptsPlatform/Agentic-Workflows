@@ -9,9 +9,9 @@ compilation.
 One-off use (recommended for most repositories):
 
 ```sh
-npx --yes --package @plainconceptsplatform/workflows@latest workflows init
-npx --yes --package @plainconceptsplatform/workflows@latest workflows add
-npx --yes --package @plainconceptsplatform/workflows@latest workflows update
+npx @plainconceptsplatform/workflows@latest init
+npx @plainconceptsplatform/workflows@latest add
+npx @plainconceptsplatform/workflows@latest update
 ```
 
 Project-local dependency use:

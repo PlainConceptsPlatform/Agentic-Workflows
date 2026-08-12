@@ -45,12 +45,12 @@ describe("catalog installation", () => {
   });
 
   it("copies ownership headers for base workflows and selected templates", async () => {
-    const header = "# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-check.md. Update with `platform-workflows update --force`; consumer edits may be overwritten.\n";
-    const templateHeader = "# Managed by @plainconceptsplatform/workflows. Source: loops/templates/agentics/agentics-checks.yml. Update with `platform-workflows update --force`; consumer edits may be overwritten.\n";
+    const header = "# Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-check.md. Update with `workflows update --force`; consumer edits may be overwritten.\n";
+    const templateHeader = "# Managed by @plainconceptsplatform/workflows. Source: loops/templates/agentics/agentics-checks.yml. Update with `workflows update --force`; consumer edits may be overwritten.\n";
     const sourcePath = await createDirectory({
-      "actions/check/action.yml": "# Managed by @plainconceptsplatform/workflows. Source: loops/actions/check/action.yml. Update with `platform-workflows update --force`; consumer edits may be overwritten.\nname: Check\n",
+      "actions/check/action.yml": "# Managed by @plainconceptsplatform/workflows. Source: loops/actions/check/action.yml. Update with `workflows update --force`; consumer edits may be overwritten.\nname: Check\n",
       "workflows/agent-check.md": `---\n${header}# Check\n`,
-      "scripts/compile.mjs": "// Managed by @plainconceptsplatform/workflows. Source: loops/scripts/compile.mjs. Update with `platform-workflows update --force`; consumer edits may be overwritten.\n",
+      "scripts/compile.mjs": "// Managed by @plainconceptsplatform/workflows. Source: loops/scripts/compile.mjs. Update with `workflows update --force`; consumer edits may be overwritten.\n",
       "templates/agentics/agentics-checks.yml": `${templateHeader}name: Agentics checks\n`,
     });
     const repositoryPath = await createDirectory({});
@@ -132,6 +132,7 @@ describe("catalog installation", () => {
       "scripts/compile.mjs": "compile\n",
       "templates/agentics/agentics-checks.yml": "name: Agentics checks\n",
       "templates/ci/app-ci-node-monorepo.yml": "name: Node CI\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
     });
     const repositoryPath = await createDirectory({});
 
@@ -145,6 +146,37 @@ describe("catalog installation", () => {
       installed: [".github/workflows/app-ci-node-monorepo.yml"],
       conflicts: [],
     });
+  });
+
+  it("installs the opencode.ci.json template to the repository root", async () => {
+    const sourcePath = await createDirectory({
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    await expect(installTemplate(repositoryPath, "opencode.ci.json", { sourcePath })).resolves.toEqual({
+      installed: ["opencode.ci.json"],
+      conflicts: [],
+    });
+    await expect(readFile(join(repositoryPath, "opencode.ci.json"), "utf8")).resolves.toBe("{ \"model\": \"plainconcepts/glm-5-2\" }\n");
+  });
+
+  it("requires force to replace the opencode.ci.json template", async () => {
+    const sourcePath = await createDirectory({
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({
+      "opencode.ci.json": "{ \"model\": \"consumer-model\" }\n",
+    });
+
+    await expect(installTemplate(repositoryPath, "opencode.ci.json", { sourcePath })).resolves.toEqual({
+      installed: [],
+      conflicts: ["opencode.ci.json"],
+    });
+    await expect(installTemplate(repositoryPath, "opencode.ci.json", { force: true, sourcePath })).resolves.toMatchObject({
+      installed: ["opencode.ci.json"],
+    });
+    await expect(readFile(join(repositoryPath, "opencode.ci.json"), "utf8")).resolves.toBe("{ \"model\": \"plainconcepts/glm-5-2\" }\n");
   });
 
   it("requires force to replace a selected template", async () => {
@@ -166,7 +198,7 @@ describe("catalog installation", () => {
 });
 
 async function createDirectory(files: Record<string, string>): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), "platform-workflows-"));
+  const directory = await mkdtemp(join(tmpdir(), "workflows-"));
   temporaryDirectories.push(directory);
   await Promise.all(Object.entries(files).map(async ([relativePath, content]) => {
     const path = join(directory, relativePath);

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Managed by @plainconceptsplatform/workflows. Source: loops/actions/apply-agent-bundle/apply-bundle.sh. Update with `platform-workflows update --force`; consumer edits may be overwritten.
+# Managed by @plainconceptsplatform/workflows. Source: loops/actions/apply-agent-bundle/apply-bundle.sh. Update with `workflows update --force`; consumer edits may be overwritten.
 set -euo pipefail
 
 BUNDLE_FILE=$1

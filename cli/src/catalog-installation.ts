@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { templateNames, type TemplateName } from "./workflow-catalog.js";
+import { catalogTemplates, templateNames, type CatalogTemplate, type TemplateName } from "./workflow-catalog.js";
 
 export interface CatalogInstallResult {
   readonly installed: readonly string[];
@@ -61,8 +61,9 @@ export async function installTemplate(
   options: CatalogInstallOptions = {},
 ): Promise<CatalogInstallResult> {
   const sourcePath = options.sourcePath ?? catalogSourcePath();
-  const source = join(sourcePath, "templates", templateDirectory(template), `${template}.yml`);
-  const target = `.github/workflows/${template}.yml`;
+  const meta = catalogTemplateMeta(template);
+  const source = join(sourcePath, "templates", meta.directory, meta.file);
+  const target = meta.target;
   const destination = join(repositoryPath, target);
   const conflicts = await exists(destination) && !(await filesMatch(source, destination)) ? [target] : [];
 
@@ -77,8 +78,13 @@ export function isTemplateName(value: string): value is TemplateName {
   return templateNames.includes(value as TemplateName);
 }
 
-function templateDirectory(template: TemplateName): "agentics" | "ci" {
-  return template.startsWith("app-ci-") ? "ci" : "agentics";
+function catalogTemplateMeta(template: TemplateName): { directory: string; file: string; target: string } {
+  const entry = catalogTemplates.find((item) => item.name === template);
+  if (entry === undefined) throw new Error(`Unknown template: ${template}`);
+  const directory = template.startsWith("opencode") ? "opencode" : template.startsWith("app-ci-") ? "ci" : "agentics";
+  const isWorkflow = entry.file.endsWith(".yml");
+  const target = isWorkflow ? `.github/workflows/${entry.file}` : entry.file;
+  return { directory, file: entry.file, target };
 }
 
 async function catalogFiles(sourcePath: string): Promise<CatalogFile[]> {

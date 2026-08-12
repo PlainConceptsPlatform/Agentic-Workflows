@@ -8,11 +8,12 @@ Install templates explicitly. They are consumer-owned copies after installation.
 | `agentics-maintenance` | Repository wants gh-aw maintenance workflow before first compilation |
 | `app-ci-dotnet-next` | .NET, SQL Server integration testing, and Next.js match repository |
 | `app-ci-node-monorepo` | Node monorepo with supported web, desktop, mobile, and E2E layout matches repository |
+| `opencode.ci.json` | Repository needs a standalone OpenCode CI config for agentic workflow runs |
 
 ## Install one
 
 ```sh
-npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template agentics-checks
+npx @plainconceptsplatform/workflows@latest add --template agentics-checks
 ```
 
 Or with a project-local dependency:
@@ -21,8 +22,9 @@ Or with a project-local dependency:
 pnpm exec workflows add --template agentics-checks
 ```
 
-Each template copies to `.github/workflows/<template>.yml`. The package does not track or update
-templates after installation. They are consumer-owned.
+Each template copies to `.github/workflows/<template>.yml` (or the repository root for
+`opencode.ci.json`). The package does not track or update templates after installation. They are
+consumer-owned.
 
 ## What each template does
 
@@ -63,6 +65,22 @@ A full CI pipeline for a Node monorepo with web, desktop, mobile, and E2E testin
 
 Read the template's `env:` block and job commands before enabling it. Tailor workspace paths, package
 scripts, and test commands to the repository.
+
+### `opencode.ci.json`
+
+A standalone OpenCode CI configuration for consumer repositories running agentic workflows in
+GitHub Actions. It installs to the repository root as `opencode.ci.json`. Includes:
+
+- `plainconcepts` provider at `http://172.30.0.30:10000` with apiKey `awf-openai-proxy`
+- `glm-5-2` ("GLM 5.2") and `glm-5-1` ("GLM 5.1") model registrations
+- Default model `plainconcepts/glm-5-2`
+- `ci-workflow-agent` agent in `primary` mode with the output discipline directive
+- LSP disabled for `csharp`, `fsharp`, and `razor` (consumers can remove the `lsp` block)
+- `read` permission allow and `/tmp/**` external directory access
+
+Read the file before enabling it. Tailor the provider endpoint, model selection, agent prompt,
+permissions, and LSP configuration to the repository. JSON (RFC 8259) does not permit comments, so
+the ownership header is documented in a companion `opencode.ci.json.md` file rather than inline.
 
 ## What not to do
 

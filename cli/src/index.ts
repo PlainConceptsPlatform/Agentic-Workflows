@@ -2,15 +2,54 @@
 
 import { inspectRepository, parseVisibility, resolveVisibility } from "./repository-inspection.js";
 import { installCatalog, installTemplate, isTemplateName } from "./catalog-installation.js";
+import { formatCatalog, listCatalog, searchCatalog } from "./catalog-listing.js";
 import type { TemplateName } from "./workflow-catalog.js";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+const HELP_TEXT = `Workflows CLI — install and manage Plain Concepts Platform agentic workflows.
+
+Usage: workflows <command> [options]
+
+Commands:
+  init                                        Inspect the repository and report its stack and visibility.
+  add                                         Install package-owned workflow files into .github/.
+  update                                      Alias for add. Use --force to overwrite managed files.
+  status                                      Print repository inspection as JSON.
+  list                                        List all available workflows and templates with install status.
+  search <query>                              Filter workflows and templates by name or description.
+
+Options:
+  --visibility public|private                 Override repository visibility (init only).
+  --template <name>                           Install a standalone template instead of the catalog.
+                                              Templates: agentics-checks, agentics-maintenance,
+                                              app-ci-dotnet-next, app-ci-node-monorepo,
+                                              opencode.ci.json.
+  --force                                     Overwrite managed files that differ from the package source.
+  -h, --help                                  Show this help text.
+
+Installed workflows are marked [x] when the corresponding .github/workflows/agent-*.md
+file exists relative to the current directory.`;
 
 export async function run(arguments_: readonly string[], repositoryPath = process.cwd()): Promise<number> {
   const [command, ...options] = arguments_;
 
   if (command === "--help" || command === "-h" || command === undefined) {
-    console.log("Usage: workflows <init|add|update|status> [--visibility public|private] [--template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo] [--force]");
+    console.log(HELP_TEXT);
+    return 0;
+  }
+
+  if (command === "list") {
+    const entries = await listCatalog({ installedPath: repositoryPath });
+    console.log(formatCatalog(entries));
+    return 0;
+  }
+
+  if (command === "search") {
+    if (options.length === 0 || options.length > 1) return fail("search requires exactly one query argument.");
+    const allEntries = await listCatalog({ installedPath: repositoryPath });
+    const results = searchCatalog(allEntries, options[0]);
+    console.log(formatCatalog(results));
     return 0;
   }
 
@@ -31,7 +70,7 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
 
   if (command === "add" || command === "update") {
     const template = readTemplateOption(options);
-    if (template === "invalid") return fail(`${command} accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo.`);
+    if (template === "invalid") return fail(`${command} accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json.`);
     const force = options.includes("--force");
     const result = template === undefined
       ? await installCatalog(repositoryPath, { force })
