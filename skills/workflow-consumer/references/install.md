@@ -6,7 +6,18 @@ compilation.
 
 ## CLI commands
 
-One-off use (recommended for most repositories):
+The primary entrypoint is the interactive TUI. Run it with no arguments:
+
+```sh
+npx @plainconceptsplatform/workflows
+```
+
+The TUI lists routes and templates with install status, allows fuzzy filtering, and installs
+selected items on Enter. Selecting any route installs the full managed catalog plus mandatory
+`opencode.ci.json` and `scripts/compile-agent-workflows.mjs`. Selecting only templates still
+installs those mandatory files.
+
+Non-interactive use (advanced, for automation):
 
 ```sh
 npx @plainconceptsplatform/workflows@latest init
@@ -18,6 +29,7 @@ Project-local dependency use:
 
 ```sh
 pnpm add -D @plainconceptsplatform/workflows
+pnpm exec workflows              # launch interactive TUI
 pnpm exec workflows init
 pnpm exec workflows add
 pnpm exec workflows update
@@ -25,10 +37,13 @@ pnpm exec workflows update
 
 | Command | What it does |
 |---|---|
+| (default) | Launches the interactive TUI for selecting and installing routes and templates |
 | `init` | Inspects the repository and its visibility. Writes no workflow files. Prints JSON to stdout |
-| `add` | Installs package-managed loop files. Stops on any changed managed destination |
+| `add` | Installs package-managed loop files including mandatory `opencode.ci.json` and `scripts/compile-agent-workflows.mjs`. Stops on any changed managed destination |
 | `update` | Refreshes managed loop files. Same conflict behavior as `add` |
 | `status` | Inspects the repository and prints JSON. No writes |
+| `list` | Lists all workflows and templates with install status |
+| `search <query>` | Filters workflows and templates by name or description |
 | `add --template <name>` | Copies one optional template. See `references/templates.md` |
 | `add --force` | Overwrites changed managed files. Back up first |
 
@@ -44,8 +59,13 @@ The package copies files from `loops/` into the consumer repository:
 | `loops/actions/` | `.github/actions/` | Yes |
 | `loops/workflows/` | `.github/workflows/` | Yes |
 | `loops/workflows/shared/` | `.github/workflows/shared/` | Yes |
-| `loops/scripts/compile-agent-workflows.mjs` | `scripts/compile-agent-workflows.mjs` | Yes |
+| `loops/scripts/compile-agent-workflows.mjs` | `scripts/compile-agent-workflows.mjs` | Yes (mandatory) |
+| `loops/scripts/` | `scripts/` | Yes |
+| `loops/templates/opencode/opencode.ci.json` | `opencode.ci.json` | Yes (mandatory) |
 | `loops/templates/` | `.github/workflows/` | No (opt-in only) |
+
+`opencode.ci.json` and `scripts/compile-agent-workflows.mjs` are always installed by `add` and by the
+TUI when any item is selected. They cannot be skipped during catalog install.
 
 Generated files that the package never copies (the consumer compiles them):
 

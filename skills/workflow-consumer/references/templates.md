@@ -1,6 +1,7 @@
 # Optional templates
 
-Install templates explicitly. They are consumer-owned copies after installation.
+Optional templates are consumer-owned copies after installation. `opencode.ci.json` is always
+installed as a mandatory file during catalog install; it is not optional.
 
 | Template | Select when |
 |---|---|
@@ -8,9 +9,11 @@ Install templates explicitly. They are consumer-owned copies after installation.
 | `agentics-maintenance` | Repository wants gh-aw maintenance workflow before first compilation |
 | `app-ci-dotnet-next` | .NET, SQL Server integration testing, and Next.js match repository |
 | `app-ci-node-monorepo` | Node monorepo with supported web, desktop, mobile, and E2E layout matches repository |
-| `opencode.ci.json` | Repository needs a standalone OpenCode CI config for agentic workflow runs |
+| `opencode.ci.json` | Always installed as mandatory during catalog install. Advanced: use `--template opencode.ci.json` to install in isolation |
 
 ## Install one
+
+Install optional templates via the TUI (toggle the template and press Enter) or the advanced `--template` command:
 
 ```sh
 npx @plainconceptsplatform/workflows@latest add --template agentics-checks
@@ -22,9 +25,10 @@ Or with a project-local dependency:
 pnpm exec workflows add --template agentics-checks
 ```
 
-Each template copies to `.github/workflows/<template>.yml` (or the repository root for
-`opencode.ci.json`). The package does not track or update templates after installation. They are
-consumer-owned.
+Each optional template copies to `.github/workflows/<template>.yml`. The package does not track or
+update templates after installation. They are consumer-owned. `opencode.ci.json` is always installed
+to the repository root as a mandatory file during catalog install; it does not appear as an optional
+template in the TUI.
 
 ## What each template does
 
@@ -69,7 +73,9 @@ scripts, and test commands to the repository.
 ### `opencode.ci.json`
 
 A standalone OpenCode CI configuration for consumer repositories running agentic workflows in
-GitHub Actions. It installs to the repository root as `opencode.ci.json`. Includes:
+GitHub Actions. It is always installed to the repository root as `opencode.ci.json` during catalog
+install — it is mandatory, not optional. The `--template opencode.ci.json` command is an advanced
+option for installing it in isolation. Includes:
 
 - `plainconcepts` provider at `http://172.30.0.30:10000` with apiKey `awf-openai-proxy`
 - `glm-5-2` ("GLM 5.2") and `glm-5-1` ("GLM 5.1") model registrations

@@ -4,14 +4,23 @@ import { inspectRepository, parseVisibility, resolveVisibility } from "./reposit
 import { installCatalog, installTemplate, isTemplateName } from "./catalog-installation.js";
 import { formatCatalog, listCatalog, searchCatalog } from "./catalog-listing.js";
 import type { TemplateName } from "./workflow-catalog.js";
+import { runInteractive } from "./tui.js";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HELP_TEXT = `Workflows CLI — install and manage Plain Concepts Platform agentic workflows.
 
+Run with no arguments to launch the interactive TUI, the primary way to select and install
+workflows and templates:
+
+  npx @plainconceptsplatform/workflows
+
+Advanced (non-interactive) commands:
+
 Usage: workflows <command> [options]
 
 Commands:
+  (default)                                   Launch the interactive TUI for selecting and installing items.
   init                                        Inspect the repository and report its stack and visibility.
   add                                         Install package-owned workflow files into .github/.
   update                                      Alias for add. Use --force to overwrite managed files.
@@ -34,9 +43,14 @@ file exists relative to the current directory.`;
 export async function run(arguments_: readonly string[], repositoryPath = process.cwd()): Promise<number> {
   const [command, ...options] = arguments_;
 
-  if (command === "--help" || command === "-h" || command === undefined) {
+  if (command === "--help" || command === "-h") {
     console.log(HELP_TEXT);
     return 0;
+  }
+
+  if (command === undefined) {
+    const force = options.includes("--force");
+    return runInteractive(repositoryPath, { force });
   }
 
   if (command === "list") {

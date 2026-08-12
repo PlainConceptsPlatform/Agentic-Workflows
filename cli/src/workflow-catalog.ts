@@ -34,7 +34,18 @@ export const packageOwnedTargets = [
   ".github/workflows/shared/opencode-ci.md",
   ".github/workflows/work-router.yml",
   "scripts/compile-agent-workflows.mjs",
+  "opencode.ci.json",
 ] as const;
+
+export interface MandatoryFile {
+  readonly source: string;
+  readonly target: string;
+}
+
+export const mandatoryFiles: readonly MandatoryFile[] = [
+  { source: "templates/opencode/opencode.ci.json", target: "opencode.ci.json" },
+  { source: "scripts/compile-agent-workflows.mjs", target: "scripts/compile-agent-workflows.mjs" },
+];
 
 export const generatedConsumerTargets = [
   ".github/workflows/agent-*.lock.yml",

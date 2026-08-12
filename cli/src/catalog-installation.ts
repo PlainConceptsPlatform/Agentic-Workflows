@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { catalogTemplates, templateNames, type CatalogTemplate, type TemplateName } from "./workflow-catalog.js";
+import { catalogTemplates, mandatoryFiles, templateNames, type CatalogTemplate, type TemplateName } from "./workflow-catalog.js";
 
 export interface CatalogInstallResult {
   readonly installed: readonly string[];
@@ -27,6 +27,14 @@ const sourceMappings = [
   ["scripts", "scripts"],
 ] as const;
 
+export function mandatoryFileSpecs(sourcePath: string): CatalogFile[] {
+  return mandatoryFiles.map((spec) => ({
+    source: join(sourcePath, spec.source),
+    target: spec.target,
+    managed: true,
+  }));
+}
+
 export function catalogSourcePath(modulePath = fileURLToPath(import.meta.url)): string {
   return resolve(dirname(modulePath), "..", "loops");
 }
@@ -36,8 +44,11 @@ export async function installCatalog(
   options: CatalogInstallOptions = {},
 ): Promise<CatalogInstallResult> {
   const sourcePath = options.sourcePath ?? catalogSourcePath();
-  const files = await catalogFiles(sourcePath);
-  const managedFiles = files.filter((file) => file.managed);
+  const files = [...await catalogFiles(sourcePath), ...mandatoryFileSpecs(sourcePath)];
+  const deduplicated = files.filter((file, index) =>
+    files.findIndex((f) => f.target === file.target) === index,
+  ).sort((left, right) => left.target.localeCompare(right.target));
+  const managedFiles = deduplicated.filter((file) => file.managed);
   const conflicts = (await Promise.all(managedFiles.map(async (file) => {
     const destination = join(repositoryPath, file.target);
     return await exists(destination) && !(await filesMatch(file.source, destination)) ? file.target : undefined;
@@ -45,14 +56,14 @@ export async function installCatalog(
 
   if (conflicts.length > 0 && !options.force) return { installed: [], conflicts };
 
-  await Promise.all(files.map(async (file) => {
+  await Promise.all(deduplicated.map(async (file) => {
     const destination = join(repositoryPath, file.target);
     if (!file.managed && await exists(destination)) return;
     await mkdir(dirname(destination), { recursive: true });
     await copyFile(file.source, destination);
   }));
 
-  return { installed: files.map((file) => file.target), conflicts };
+  return { installed: deduplicated.map((file) => file.target), conflicts };
 }
 
 export async function installTemplate(
@@ -72,6 +83,28 @@ export async function installTemplate(
   await mkdir(dirname(destination), { recursive: true });
   await copyFile(source, destination);
   return { installed: [target], conflicts };
+}
+
+export async function installMandatoryFiles(
+  repositoryPath: string,
+  options: CatalogInstallOptions = {},
+): Promise<CatalogInstallResult> {
+  const sourcePath = options.sourcePath ?? catalogSourcePath();
+  const files = mandatoryFileSpecs(sourcePath).sort((left, right) => left.target.localeCompare(right.target));
+  const conflicts = (await Promise.all(files.map(async (file) => {
+    const destination = join(repositoryPath, file.target);
+    return await exists(destination) && !(await filesMatch(file.source, destination)) ? file.target : undefined;
+  }))).filter((file): file is string => file !== undefined);
+
+  if (conflicts.length > 0 && !options.force) return { installed: [], conflicts };
+
+  await Promise.all(files.map(async (file) => {
+    const destination = join(repositoryPath, file.target);
+    await mkdir(dirname(destination), { recursive: true });
+    await copyFile(file.source, destination);
+  }));
+
+  return { installed: files.map((file) => file.target), conflicts };
 }
 
 export function isTemplateName(value: string): value is TemplateName {

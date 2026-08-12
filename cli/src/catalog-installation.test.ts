@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { catalogSourcePath, installCatalog, installTemplate } from "./catalog-installation.js";
+import { catalogSourcePath, installCatalog, installMandatoryFiles, installTemplate } from "./catalog-installation.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -22,12 +22,14 @@ describe("catalog installation", () => {
     expect(catalogSourcePath(join(packageDirectory, "dist", "catalog-installation.js"))).toBe(join(packageDirectory, "loops"));
   });
 
-  it("installs package-owned loops files", async () => {
+  it("installs package-owned loops files including mandatory opencode.ci.json and compile script", async () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",
       "workflows/agent-check.md": "# Check\n",
       "workflows/shared/defaults.md": "defaults\n",
-      "scripts/compile.mjs": "console.log('compile');\n",
+      "scripts/compile-agent-workflows.mjs": "console.log('compile');\n",
+      "scripts/compile.mjs": "console.log('old compile');\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
       "workflows/agent-check.lock.yml": "generated\n",
       "actions/actions-lock.json": "generated\n",
     });
@@ -38,6 +40,8 @@ describe("catalog installation", () => {
         ".github/actions/check/action.yml",
         ".github/workflows/agent-check.md",
         ".github/workflows/shared/defaults.md",
+        "opencode.ci.json",
+        "scripts/compile-agent-workflows.mjs",
         "scripts/compile.mjs",
       ],
       conflicts: [],
@@ -50,7 +54,8 @@ describe("catalog installation", () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "# Managed by @plainconceptsplatform/workflows. Source: loops/actions/check/action.yml. Update with `workflows update --force`; consumer edits may be overwritten.\nname: Check\n",
       "workflows/agent-check.md": `---\n${header}# Check\n`,
-      "scripts/compile.mjs": "// Managed by @plainconceptsplatform/workflows. Source: loops/scripts/compile.mjs. Update with `workflows update --force`; consumer edits may be overwritten.\n",
+      "scripts/compile-agent-workflows.mjs": "// Managed by @plainconceptsplatform/workflows. Source: loops/scripts/compile-agent-workflows.mjs. Update with `workflows update --force`; consumer edits may be overwritten.\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
       "templates/agentics/agentics-checks.yml": `${templateHeader}name: Agentics checks\n`,
     });
     const repositoryPath = await createDirectory({});
@@ -66,7 +71,8 @@ describe("catalog installation", () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",
       "workflows/agent-check.md": "# Check\n",
-      "scripts/compile.mjs": "compile\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
     });
     const repositoryPath = await createDirectory({ ".github/workflows/agent-check.md": "# Check\n" });
 
@@ -77,7 +83,8 @@ describe("catalog installation", () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",
       "workflows/agent-check.md": "# Check\n",
-      "scripts/compile.mjs": "compile\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
     });
     const repositoryPath = await createDirectory({
       ".github/workflows/shared/repo-config.md": "legacy consumer config\n",
@@ -87,7 +94,8 @@ describe("catalog installation", () => {
       installed: [
         ".github/actions/check/action.yml",
         ".github/workflows/agent-check.md",
-        "scripts/compile.mjs",
+        "opencode.ci.json",
+        "scripts/compile-agent-workflows.mjs",
       ],
       conflicts: [],
     });
@@ -98,12 +106,14 @@ describe("catalog installation", () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "package action\n",
       "workflows/agent-check.md": "package workflow\n",
-      "scripts/compile.mjs": "package script\n",
+      "scripts/compile-agent-workflows.mjs": "package script\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
     });
     const repositoryPath = await createDirectory({
       ".github/actions/check/action.yml": "consumer action\n",
       ".github/workflows/agent-check.md": "consumer workflow\n",
-      "scripts/compile.mjs": "consumer script\n",
+      "scripts/compile-agent-workflows.mjs": "consumer script\n",
+      "opencode.ci.json": "{ \"model\": \"consumer-model\" }\n",
     });
 
     await expect(installCatalog(repositoryPath, { sourcePath })).resolves.toEqual({
@@ -111,7 +121,8 @@ describe("catalog installation", () => {
       conflicts: [
         ".github/actions/check/action.yml",
         ".github/workflows/agent-check.md",
-        "scripts/compile.mjs",
+        "opencode.ci.json",
+        "scripts/compile-agent-workflows.mjs",
       ],
     });
 
@@ -119,7 +130,8 @@ describe("catalog installation", () => {
       conflicts: [
         ".github/actions/check/action.yml",
         ".github/workflows/agent-check.md",
-        "scripts/compile.mjs",
+        "opencode.ci.json",
+        "scripts/compile-agent-workflows.mjs",
       ],
     });
     await expect(readFile(join(repositoryPath, ".github/actions/check/action.yml"), "utf8")).resolves.toBe("package action\n");
@@ -129,10 +141,10 @@ describe("catalog installation", () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",
       "workflows/agent-check.md": "# Check\n",
-      "scripts/compile.mjs": "compile\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
       "templates/agentics/agentics-checks.yml": "name: Agentics checks\n",
       "templates/ci/app-ci-node-monorepo.yml": "name: Node CI\n",
-      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
     });
     const repositoryPath = await createDirectory({});
 
@@ -146,6 +158,94 @@ describe("catalog installation", () => {
       installed: [".github/workflows/app-ci-node-monorepo.yml"],
       conflicts: [],
     });
+  });
+
+  it("installCatalog installs mandatory opencode.ci.json and compile script alongside catalog files", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "name: Check\n",
+      "workflows/agent-check.md": "# Check\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    const result = await installCatalog(repositoryPath, { sourcePath });
+    expect(result.installed).toContain("opencode.ci.json");
+    expect(result.installed).toContain("scripts/compile-agent-workflows.mjs");
+    await expect(readFile(join(repositoryPath, "opencode.ci.json"), "utf8")).resolves.toBe("{ \"model\": \"plainconcepts/glm-5-2\" }\n");
+    await expect(readFile(join(repositoryPath, "scripts/compile-agent-workflows.mjs"), "utf8")).resolves.toBe("compile\n");
+  });
+
+  it("installMandatoryFiles installs opencode.ci.json and compile script without catalog files", async () => {
+    const sourcePath = await createDirectory({
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    const result = await installMandatoryFiles(repositoryPath, { sourcePath });
+    expect(result.installed).toEqual(["opencode.ci.json", "scripts/compile-agent-workflows.mjs"]);
+    await expect(readFile(join(repositoryPath, "opencode.ci.json"), "utf8")).resolves.toBe("{ \"model\": \"plainconcepts/glm-5-2\" }\n");
+    await expect(readFile(join(repositoryPath, "scripts/compile-agent-workflows.mjs"), "utf8")).resolves.toBe("compile\n");
+  });
+
+  it("installMandatoryFiles reports conflicts on differing files", async () => {
+    const sourcePath = await createDirectory({
+      "scripts/compile-agent-workflows.mjs": "package script\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({
+      "opencode.ci.json": "{ \"model\": \"consumer\" }\n",
+      "scripts/compile-agent-workflows.mjs": "consumer script\n",
+    });
+
+    await expect(installMandatoryFiles(repositoryPath, { sourcePath })).resolves.toEqual({
+      installed: [],
+      conflicts: ["opencode.ci.json", "scripts/compile-agent-workflows.mjs"],
+    });
+  });
+
+  it("installMandatoryFiles overwrites with force", async () => {
+    const sourcePath = await createDirectory({
+      "scripts/compile-agent-workflows.mjs": "package script\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({
+      "opencode.ci.json": "{ \"model\": \"consumer\" }\n",
+      "scripts/compile-agent-workflows.mjs": "consumer script\n",
+    });
+
+    await expect(installMandatoryFiles(repositoryPath, { force: true, sourcePath })).resolves.toMatchObject({
+      installed: ["opencode.ci.json", "scripts/compile-agent-workflows.mjs"],
+    });
+    await expect(readFile(join(repositoryPath, "opencode.ci.json"), "utf8")).resolves.toBe("{ \"model\": \"plainconcepts/glm-5-2\" }\n");
+  });
+
+  it("installMandatoryFiles does not install catalog workflow files", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "name: Check\n",
+      "workflows/agent-check.md": "# Check\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    await installMandatoryFiles(repositoryPath, { sourcePath });
+    await expect(readFile(join(repositoryPath, ".github/workflows/agent-check.md"), "utf8")).rejects.toThrow();
+  });
+
+  it("installCatalog deduplicates compile script in both scripts/ and mandatory files", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "name: Check\n",
+      "workflows/agent-check.md": "# Check\n",
+      "scripts/compile-agent-workflows.mjs": "same compile script\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    const result = await installCatalog(repositoryPath, { sourcePath });
+    const compileEntries = result.installed.filter((path) => path === "scripts/compile-agent-workflows.mjs");
+    expect(compileEntries).toHaveLength(1);
   });
 
   it("installs the opencode.ci.json template to the repository root", async () => {

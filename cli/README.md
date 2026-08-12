@@ -2,11 +2,21 @@
 
 Install and update shared GitHub Agentic Workflows for Plain Concepts Platform repositories.
 
+## Quick start
+
+The primary entrypoint is the interactive TUI. Run it with no arguments:
+
+```bash
+npx @plainconceptsplatform/workflows
+```
+
+The TUI lists all routes and templates with install status. Arrow keys navigate, space toggles, Enter installs. Selecting any route installs the full managed catalog plus mandatory `opencode.ci.json` and `scripts/compile-agent-workflows.mjs`. Selecting only templates still installs those mandatory files.
+
 ## Install
 
 Before installing workflows, install and configure [`PlainConceptsPlatform/opencode-onboard`](https://github.com/PlainConceptsPlatform/opencode-onboard) in the consumer repository. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available before compiling workflows.
 
-For one-off use, prefer:
+For non-interactive use (advanced):
 
 ```bash
 npx @plainconceptsplatform/workflows@latest init
@@ -18,13 +28,14 @@ For a project-local development dependency:
 
 ```bash
 pnpm add -D @plainconceptsplatform/workflows
+pnpm exec workflows              # launch interactive TUI
 pnpm exec workflows init
 pnpm exec workflows add
 ```
 
 `init` inspects the repository and reports its stack and visibility. It does not create or manage repository configuration or a manifest.
 
-`add` installs package-owned files. It stops when a managed file differs. Use `pnpm exec workflows update --force` only when you intend to replace managed workflow files.
+`add` installs package-owned files including the mandatory `opencode.ci.json` and `scripts/compile-agent-workflows.mjs`. It stops when a managed file differs. Use `pnpm exec workflows update --force` only when you intend to replace managed workflow files.
 
 Install optional standalone templates with `add --template`. Available templates are `agentics-checks`, `agentics-maintenance`, `app-ci-dotnet-next`, and `app-ci-node-monorepo`. CI templates are stack-specific copies, not a combined template. Edit their top-level `env:` values for repository paths, package names, and commands.
 

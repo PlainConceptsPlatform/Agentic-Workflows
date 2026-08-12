@@ -20,7 +20,14 @@ commands exist locally.
 
 ## Install and update
 
-The package bin name is `workflows`. Use one-off invocation exactly as shown:
+The primary entrypoint is the interactive TUI. Run it with no arguments to see all available routes
+and templates, select what to install, and get mandatory files automatically:
+
+```sh
+npx @plainconceptsplatform/workflows
+```
+
+For non-interactive use (advanced):
 
 ```sh
 npx @plainconceptsplatform/workflows@latest init
@@ -32,36 +39,37 @@ For a project-local development dependency, install the package first and use:
 
 ```sh
 pnpm add -D @plainconceptsplatform/workflows
+pnpm exec workflows              # launch interactive TUI
 pnpm exec workflows init
 pnpm exec workflows add
 pnpm exec workflows update
 ```
 
-`init` inspects the repository and its visibility without writing workflow files. `add` installs
-managed loop files. `update` refreshes them.
+`add` installs managed loop files and the mandatory `opencode.ci.json` and
+`scripts/compile-agent-workflows.mjs`. The TUI also installs these mandatory files when any route or
+template is selected. `update` refreshes them.
 
 Full install, layout, ownership header, and update conflict handling are in
 `references/install.md`.
 
 ## Select templates deliberately
 
-Templates are optional and independent of managed loops. Add only the template matching the
-repository:
+Optional templates are independent of managed loops. Add only the template matching the
+repository via the TUI or the advanced `--template` command:
 
 ```sh
 npx @plainconceptsplatform/workflows@latest add --template agentics-checks
 npx @plainconceptsplatform/workflows@latest add --template agentics-maintenance
 npx @plainconceptsplatform/workflows@latest add --template app-ci-dotnet-next
 npx @plainconceptsplatform/workflows@latest add --template app-ci-node-monorepo
-npx @plainconceptsplatform/workflows@latest add --template opencode.ci.json
 ```
+
+`opencode.ci.json` is always installed as a mandatory file during catalog install. The
+`--template opencode.ci.json` command is an advanced option for installing it in isolation.
 
 Use `agentics-checks` to validate agentic sources and generated locks in pull requests. Use
 `agentics-maintenance` only when the repository wants the pre-generated gh-aw maintenance workflow.
-Select one CI template only when its technology and commands suit the repository. Use
-`opencode.ci.json` to provide a standalone OpenCode CI configuration for agentic workflow runs in
-CI. Templates are copied to `.github/workflows/` (or the repository root for `opencode.ci.json`)
-and consumer-owned after installation.
+Select one CI template only when its technology and commands suit the repository.
 
 Full template selection guidance is in `references/templates.md`.
 

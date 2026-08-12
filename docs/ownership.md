@@ -22,14 +22,14 @@ Generated `*.lock.yml` files and `.github/aw/actions-lock.json` belong only in c
 
 Before installing or compiling workflows, consumers should install and configure `PlainConceptsPlatform/opencode-onboard`. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available in the consumer repository before compiling.
 
-For one-off use, run `npx @plainconceptsplatform/workflows@latest <init|add|update>`. Use `pnpm exec workflows <init|add|update>` only with a project-local `@plainconceptsplatform/workflows` development dependency.
+The primary entrypoint is the interactive TUI: `npx @plainconceptsplatform/workflows` (no arguments). Non-interactive commands (`init`, `add`, `update`) are advanced options for automation. Use `pnpm exec workflows` (no arguments) to launch the TUI when the package is a project-local development dependency.
 
 Workers use generic Platform baseline wording and `pnpm verify` by default. Consumers replace these
 worker-local values and prompt guidance when their repository needs different checks or rules.
 
 ## Optional templates
 
-`loops/templates/agentics/` and `loops/templates/ci/` contain standalone opt-in templates. Catalog installation never copies them implicitly. Consumers select one with `workflows add --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo`, and can replace a changed copy only with `--force`. `loops/templates/opencode/` contains the `opencode.ci.json` OpenCode CI configuration template, installed with `workflows add --template opencode.ci.json`.
+`loops/templates/agentics/` and `loops/templates/ci/` contain standalone opt-in templates. Catalog installation never copies them implicitly. Consumers select one with `workflows add --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo`, and can replace a changed copy only with `--force`. `loops/templates/opencode/opencode.ci.json` is always installed as a mandatory file during catalog install — it is not optional. The `--template opencode.ci.json` command is an advanced option for installing it in isolation.
 
 `app-ci-dotnet-next` is based on Numa's application CI and retains .NET, SQL Server integration testing, Next.js, TruffleHog, Trivy, Semgrep, and SBOM checks. `app-ci-node-monorepo` is based on Orbion's application CI and retains Node monorepo, browser, Electron, Capacitor, TruffleHog, Trivy, Semgrep, and SBOM checks. Both are standalone workflows with top-level `env:` defaults; neither calls reusable repository workflows or reads repository configuration.
 
