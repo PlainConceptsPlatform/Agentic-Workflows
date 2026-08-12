@@ -10,5 +10,6 @@
     "verify": "pnpm typecheck && pnpm build && pnpm test",
     "pack": "pnpm verify && pnpm --filter @plainconceptsplatform/workflows pack --pack-destination ../../artifacts",
     "release": "pnpm verify && pnpm --filter @plainconceptsplatform/workflows release"
-  }
+  },
+  "version": "0.0.1"
 }
