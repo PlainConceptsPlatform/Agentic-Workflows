@@ -86,9 +86,10 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
     const template = readTemplateOption(options);
     if (template === "invalid") return fail(`${command} accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json.`);
     const force = options.includes("--force");
+    const inspection = await inspectRepository(repositoryPath);
     const result = template === undefined
-      ? await installCatalog(repositoryPath, { force })
-      : await installTemplate(repositoryPath, template, { force });
+      ? await installCatalog(repositoryPath, { force, inspection })
+      : await installTemplate(repositoryPath, template, { force, inspection });
     if (result.conflicts.length > 0 && !force) {
       console.error(`Catalog conflicts found. Re-run with --force to overwrite package-managed files:\n${result.conflicts.join("\n")}`);
       return 1;

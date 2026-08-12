@@ -2,6 +2,8 @@ import * as readline from "node:readline";
 
 import { formatCatalog, listCatalog, type CatalogEntry } from "./catalog-listing.js";
 import { installCatalog, installMandatoryFiles, installTemplate, isTemplateName } from "./catalog-installation.js";
+import { inspectRepository } from "./repository-inspection.js";
+import { routeNames, type RouteName } from "./workflow-catalog.js";
 
 export type SelectionStatus = "selecting" | "submitting" | "cancelled";
 
@@ -289,8 +291,18 @@ async function installSelected(
   const allConflicts: string[] = [];
   const allInstalled: string[] = [];
 
+  const selectedRouteNames = routes.length > 0
+    ? routes.map((entry) => entry.name).filter((name): name is RouteName => routeNames.includes(name as RouteName))
+    : [...routeNames];
+
+  const inspection = await inspectRepository(repositoryPath);
+
   if (routes.length > 0) {
-    const result = await installCatalog(repositoryPath, { force });
+    const result = await installCatalog(repositoryPath, {
+      force,
+      selectedRoutes: selectedRouteNames,
+      inspection,
+    });
     allConflicts.push(...result.conflicts);
     allInstalled.push(...result.installed);
   } else {
@@ -301,7 +313,7 @@ async function installSelected(
 
   for (const template of templates) {
     if (!isTemplateName(template.name)) continue;
-    const result = await installTemplate(repositoryPath, template.name, { force });
+    const result = await installTemplate(repositoryPath, template.name, { force, inspection });
     allConflicts.push(...result.conflicts);
     allInstalled.push(...result.installed);
   }

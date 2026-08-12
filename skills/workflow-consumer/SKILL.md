@@ -81,9 +81,29 @@ replacing a managed file. Back up or move consumer changes before force update.
 
 There is no shared `repo-config` file. Every `agent-*.md` worker is standalone. After installation,
 edit that worker's top-level `env:` values directly for labels, paths, prompt rules, endpoint,
-model-related settings, and verification commands. Values have concrete defaults, including
-`OPENAI_BASE_URL: https://forge.plainconcepts.com/v1`. Keep worker-specific configuration in worker
-frontmatter; do not create a shared repository configuration layer.
+model-related settings, and verification commands.
+
+The CLI generates stack-aware defaults for `VERIFY_COMMANDS` and base `REPO_RULES` by detecting the
+repository's technology stack at install time. It inspects for `.slnx` ( .NET solutions) and
+`pnpm-lock.yaml`, then injects appropriate verify commands and architecture rules into each worker's
+`env:` block. `shared/platform-defaults.md` no longer carries `VERIFY_COMMANDS` — that value is now
+generated per-worker during installation and can be overridden in each worker. This keeps the shared
+file to network allowlists and safe-output defaults only.
+
+Consumers MUST edit each worker's `REPO_RULES` to contain route-specific rules relevant to their
+repository. The CLI generates a base from stack detection (e.g., "Follow Clean Architecture layering"
+for .NET repos), but route-specific rules require domain knowledge the CLI does not have. See
+`references/customize.md` for what each route's `REPO_RULES` should focus on.
+
+Values have concrete defaults, including `OPENAI_BASE_URL: https://forge.plainconcepts.com/v1`. Keep
+worker-specific configuration in worker frontmatter; do not create a shared repository configuration
+layer.
+
+The CLI also generates stack-aware `opencode-ci.md` and `opencode.ci.json` based on detection. When
+a `.slnx` is found, NuGet cache and `dotnet restore` steps are added to the CI setup, and the LSP
+section with csharp/fsharp/razor disabled is included. When an `openspec/` directory exists, an
+OpenSpec CLI install step is added. The `opencode.ci.json` template's agent prompt receives either
+.NET guardrails or Node/React rules depending on the stack.
 
 Shared imports can carry mechanics, but worker frontmatter owns policy: environment defaults,
 permissions, engine, model, runners, Safe Outputs, and timeout. Preserve ownership headers unless

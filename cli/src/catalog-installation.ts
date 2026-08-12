@@ -1,9 +1,16 @@
-import { access, copyFile, mkdir, readFile, readdir } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
-import { catalogTemplates, mandatoryFiles, templateNames, type CatalogTemplate, type TemplateName } from "./workflow-catalog.js";
+import { catalogTemplates, mandatoryFiles, routeNames, templateNames, workflowRoutes, type CatalogTemplate, type RouteName, type TemplateName } from "./workflow-catalog.js";
+import { processRoutes, excludedWorkerFiles } from "./route-processing.js";
+import { generateOpencodeCi, generateOpencodeConfig, generateStackDefaults, injectStackEnv, type StackDefaults } from "./stack-defaults.js";
+import type { RepositoryInspection } from "./repository-inspection.js";
+
+const execFileAsync = promisify(execFile);
 
 export interface CatalogInstallResult {
   readonly installed: readonly string[];
@@ -13,6 +20,8 @@ export interface CatalogInstallResult {
 export interface CatalogInstallOptions {
   readonly force?: boolean;
   readonly sourcePath?: string;
+  readonly selectedRoutes?: readonly RouteName[];
+  readonly inspection?: RepositoryInspection;
 }
 
 interface CatalogFile {
@@ -44,11 +53,19 @@ export async function installCatalog(
   options: CatalogInstallOptions = {},
 ): Promise<CatalogInstallResult> {
   const sourcePath = options.sourcePath ?? catalogSourcePath();
-  const files = [...await catalogFiles(sourcePath), ...mandatoryFileSpecs(sourcePath)];
-  const deduplicated = files.filter((file, index) =>
-    files.findIndex((f) => f.target === file.target) === index,
+  const selectedRoutes = options.selectedRoutes ?? routeNames;
+  const allFiles = [...await catalogFiles(sourcePath), ...mandatoryFileSpecs(sourcePath)];
+  const deduplicated = allFiles.filter((file, index) =>
+    allFiles.findIndex((f) => f.target === file.target) === index,
   ).sort((left, right) => left.target.localeCompare(right.target));
-  const managedFiles = deduplicated.filter((file) => file.managed);
+
+  const excluded = excludedWorkerFiles(selectedRoutes);
+  const filtered = deduplicated.filter((file) => {
+    const fileName = file.target.split("/").pop() ?? "";
+    return !excluded.has(fileName);
+  });
+
+  const managedFiles = filtered.filter((file) => file.managed);
   const conflicts = (await Promise.all(managedFiles.map(async (file) => {
     const destination = join(repositoryPath, file.target);
     return await exists(destination) && !(await filesMatch(file.source, destination)) ? file.target : undefined;
@@ -56,14 +73,58 @@ export async function installCatalog(
 
   if (conflicts.length > 0 && !options.force) return { installed: [], conflicts };
 
-  await Promise.all(deduplicated.map(async (file) => {
-    const destination = join(repositoryPath, file.target);
-    if (!file.managed && await exists(destination)) return;
+  const fileContents = new Map<string, string>();
+  for (const file of filtered) {
+    fileContents.set(file.target, await readFile(file.source, "utf8"));
+  }
+
+  let processedContents = processRoutes(fileContents, selectedRoutes);
+
+  if (options.inspection !== undefined) {
+    const defaults = generateStackDefaults(options.inspection);
+    processedContents = injectStackIntoWorkers(processedContents, defaults);
+    processedContents = transformOpencodeFiles(processedContents, options.inspection);
+  }
+
+  await Promise.all([...processedContents.entries()].map(async ([target, content]) => {
+    const destination = join(repositoryPath, target);
+    const originalFile = filtered.find((f) => f.target === target);
+    if (originalFile !== undefined && !originalFile.managed && await exists(destination)) return;
     await mkdir(dirname(destination), { recursive: true });
-    await copyFile(file.source, destination);
+    await writeFile(destination, content, "utf8");
   }));
 
-  return { installed: deduplicated.map((file) => file.target), conflicts };
+  await ensurePreCommitHook(repositoryPath);
+
+  try {
+    await runCompileIfAvailable(repositoryPath);
+  } catch {
+    // compile failure is non-fatal
+  }
+
+  return { installed: [...processedContents.keys()].sort(), conflicts };
+}
+
+function injectStackIntoWorkers(files: Map<string, string>, defaults: StackDefaults): Map<string, string> {
+  const result = new Map(files);
+  for (const [key, content] of result) {
+    if (key.startsWith(".github/workflows/agent-") && key.endsWith(".md")) {
+      result.set(key, injectStackEnv(content, defaults));
+    }
+  }
+  return result;
+}
+
+function transformOpencodeFiles(files: Map<string, string>, inspection: RepositoryInspection): Map<string, string> {
+  const result = new Map(files);
+  for (const [key, content] of result) {
+    if (key.endsWith("opencode-ci.md")) {
+      result.set(key, generateOpencodeCi(content, inspection));
+    } else if (key === "opencode.ci.json") {
+      result.set(key, generateOpencodeConfig(content, inspection));
+    }
+  }
+  return result;
 }
 
 export async function installTemplate(
@@ -82,6 +143,19 @@ export async function installTemplate(
 
   await mkdir(dirname(destination), { recursive: true });
   await copyFile(source, destination);
+
+  if (options.inspection !== undefined && template === "opencode.ci.json") {
+    const baseContent = await readFile(source, "utf8");
+    const transformed = generateOpencodeConfig(baseContent, options.inspection);
+    await writeFile(destination, transformed, "utf8");
+  }
+
+  try {
+    await runCompileIfAvailable(repositoryPath);
+  } catch {
+    // compile failure is non-fatal
+  }
+
   return { installed: [target], conflicts };
 }
 
@@ -109,6 +183,27 @@ export async function installMandatoryFiles(
 
 export function isTemplateName(value: string): value is TemplateName {
   return templateNames.includes(value as TemplateName);
+}
+
+export async function ensurePreCommitHook(repositoryPath: string): Promise<void> {
+  const hookPath = join(repositoryPath, ".husky", "pre-commit");
+  if (!await exists(hookPath)) return;
+
+  const content = await readFile(hookPath, "utf8");
+  const compileLine = "node scripts/compile-agent-workflows.mjs";
+  if (content.includes("compile-agent-workflows")) return;
+
+  const newContent = content.endsWith("\n") || content === ""
+    ? `${content}${compileLine}\n`
+    : `${content}\n${compileLine}\n`;
+  await writeFile(hookPath, newContent, "utf8");
+}
+
+export async function runCompileIfAvailable(repositoryPath: string): Promise<void> {
+  const script = join(repositoryPath, "scripts", "compile-agent-workflows.mjs");
+  if (await exists(script)) {
+    await execFileAsync("node", [script, "--force"], { cwd: repositoryPath });
+  }
 }
 
 function catalogTemplateMeta(template: TemplateName): { directory: string; file: string; target: string } {
@@ -158,7 +253,7 @@ async function filesMatch(source: string, destination: string): Promise<boolean>
   }
 }
 
-async function exists(path: string): Promise<boolean> {
+export async function exists(path: string): Promise<boolean> {
   try {
     await access(path, constants.F_OK);
     return true;
