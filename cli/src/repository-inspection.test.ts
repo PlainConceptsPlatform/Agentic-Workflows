@@ -66,7 +66,7 @@ describe("CLI commands", () => {
     const error = captureConsole("error");
 
     await expect(run(["update", "--invalid"], repositoryPath)).resolves.toBe(1);
-    expect(error.calls).toEqual(["update accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json."]);
+    expect(error.calls).toEqual(["Unknown option: --invalid"]);
     error.restore();
   });
 });

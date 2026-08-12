@@ -3,7 +3,7 @@
 import { inspectRepository, parseVisibility, resolveVisibility } from "./repository-inspection.js";
 import { installCatalog, installTemplate, isTemplateName } from "./catalog-installation.js";
 import { formatCatalog, listCatalog, searchCatalog } from "./catalog-listing.js";
-import type { TemplateName } from "./workflow-catalog.js";
+import { routeNames, type RouteName, type TemplateName } from "./workflow-catalog.js";
 import { runInteractive } from "./tui.js";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,15 +22,25 @@ Usage: workflows <command> [options]
 Commands:
   (default)                                   Launch the interactive TUI for selecting and installing items.
   init                                        Inspect the repository and report its stack and visibility.
-  add                                         Install package-owned workflow files into .github/.
-  update                                      Alias for add. Use --force to overwrite managed files.
+  add [routes] [--template <name>] [--force]  Install route workers, a template, or mandatory files.
+  update                                      Alias for add.
   status                                      Print repository inspection as JSON.
   list                                        List all available workflows and templates with install status.
   search <query>                              Filter workflows and templates by name or description.
 
+Route names (positional arguments to add):
+  refine, implement, direct, apply-review, merge-gate, audit, propose
+
+  add                                         Mandatory files only (opencode.ci.json, compile script,
+                                              shared imports, actions, router, classifier, route matrix).
+  add implement refine direct                Installs those route workers plus mandatory files.
+  add --template agentics-checks             Installs the named template only (no mandatory files).
+  add refine --template agentics-checks      Installs routes + mandatory + the named template.
+  add refine implement --force               Forces re-install of routes plus mandatory, overwriting.
+
 Options:
   --visibility public|private                 Override repository visibility (init only).
-  --template <name>                           Install a standalone template instead of the catalog.
+  --template <name>                           Install a standalone template alongside or instead of routes.
                                               Templates: agentics-checks, agentics-maintenance,
                                               app-ci-dotnet-next, app-ci-node-monorepo,
                                               opencode.ci.json.
@@ -83,18 +93,37 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
   }
 
   if (command === "add" || command === "update") {
-    const template = readTemplateOption(options);
-    if (template === "invalid") return fail(`${command} accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json.`);
-    const force = options.includes("--force");
+    const parsed = parseAddOptions(options);
+    if (parsed.kind === "invalid") return fail(parsed.message);
     const inspection = await inspectRepository(repositoryPath);
-    const result = template === undefined
-      ? await installCatalog(repositoryPath, { force, inspection })
-      : await installTemplate(repositoryPath, template, { force, inspection });
-    if (result.conflicts.length > 0 && !force) {
-      console.error(`Catalog conflicts found. Re-run with --force to overwrite package-managed files:\n${result.conflicts.join("\n")}`);
+    const routes = parsed.routes;
+    const template = parsed.template;
+    const force = parsed.force;
+
+    const allConflicts: string[] = [];
+    const allInstalled: string[] = [];
+
+    if (routes.length > 0) {
+      const result = await installCatalog(repositoryPath, { force, selectedRoutes: routes, inspection });
+      allConflicts.push(...result.conflicts);
+      allInstalled.push(...result.installed);
+    } else if (template === undefined) {
+      const result = await installCatalog(repositoryPath, { force, selectedRoutes: [], inspection });
+      allConflicts.push(...result.conflicts);
+      allInstalled.push(...result.installed);
+    }
+
+    if (template !== undefined) {
+      const result = await installTemplate(repositoryPath, template, { force, inspection });
+      allConflicts.push(...result.conflicts);
+      allInstalled.push(...result.installed);
+    }
+
+    if (allConflicts.length > 0 && !force) {
+      console.error(`Catalog conflicts found. Re-run with --force to overwrite package-managed files:\n${allConflicts.join("\n")}`);
       return 1;
     }
-    console.log(JSON.stringify({ command, ...result }, null, 2));
+    console.log(JSON.stringify({ command, installed: allInstalled.sort(), conflicts: allConflicts }, null, 2));
     return 0;
   }
 
@@ -107,16 +136,59 @@ function readVisibilityOption(options: readonly string[]): "invalid" | "public" 
   return parseVisibility(options[1]) ?? "invalid";
 }
 
-function readTemplateOption(options: readonly string[]): "invalid" | TemplateName | undefined {
-  const templateIndex = options.indexOf("--template");
-  if (templateIndex === -1) return options.every((option) => option === "--force") ? undefined : "invalid";
-  if (templateIndex + 1 >= options.length || options.filter((option) => option === "--template").length !== 1) return "invalid";
-  if (options.some((option, index) => option !== "--force" && index !== templateIndex && index !== templateIndex + 1)) return "invalid";
-  return templateNameFromOptions(options[templateIndex + 1]);
+type ParsedAddOptions =
+  | { kind: "ok"; routes: readonly RouteName[]; template: TemplateName | undefined; force: boolean }
+  | { kind: "invalid"; message: string };
+
+const TEMPLATE_NAMES = "agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json";
+
+function parseAddOptions(options: readonly string[]): ParsedAddOptions {
+  const routes: RouteName[] = [];
+  let template: TemplateName | undefined;
+  let templateSeen = false;
+  let force = false;
+  let i = 0;
+
+  while (i < options.length) {
+    const token = options[i]!;
+
+    if (token === "--force") {
+      force = true;
+      i++;
+      continue;
+    }
+
+    if (token === "--template") {
+      if (templateSeen) return invalid("--template can only be specified once.");
+      templateSeen = true;
+      if (i + 1 >= options.length) return invalid("--template requires a name.");
+      const name = options[i + 1]!;
+      if (!isTemplateName(name)) return invalid(`--template must be one of: ${TEMPLATE_NAMES}.`);
+      template = name;
+      i += 2;
+      continue;
+    }
+
+    if (token.startsWith("--")) {
+      return invalid(`Unknown option: ${token}`);
+    }
+
+    if (routeNames.includes(token as RouteName)) {
+      const route = token as RouteName;
+      if (routes.includes(route)) return invalid(`Duplicate route: ${route}.`);
+      routes.push(route);
+      i++;
+      continue;
+    }
+
+    return invalid(`Unknown route: ${token}. Valid routes: ${routeNames.join(", ")}.`);
+  }
+
+  return { kind: "ok", routes, template, force };
 }
 
-function templateNameFromOptions(value: string | undefined): "invalid" | TemplateName {
-  return value !== undefined && isTemplateName(value) ? value : "invalid";
+function invalid(message: string): ParsedAddOptions {
+  return { kind: "invalid", message };
 }
 
 function fail(message: string): number {

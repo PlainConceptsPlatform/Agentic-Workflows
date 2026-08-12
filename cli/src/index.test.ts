@@ -5,12 +5,20 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { run } from "./index.js";
+import * as catalogInstallation from "./catalog-installation.js";
 
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true })));
+  vi.restoreAllMocks();
 });
+
+function mockInstallers() {
+  const installCatalog = vi.spyOn(catalogInstallation, "installCatalog").mockResolvedValue({ installed: [], conflicts: [] });
+  const installTemplate = vi.spyOn(catalogInstallation, "installTemplate").mockResolvedValue({ installed: [], conflicts: [] });
+  return { installCatalog, installTemplate };
+}
 
 describe("workflows CLI", () => {
   it("prints template names in help", async () => {
@@ -24,12 +32,41 @@ describe("workflows CLI", () => {
     log.mockRestore();
   });
 
-  it("rejects an unsupported template", async () => {
+  it("prints route names as positional arguments in help", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["--help"])).resolves.toBe(0);
+
+    const output = log.mock.calls[0]![0] as string;
+    expect(output).toContain("refine, implement, direct, apply-review, merge-gate, audit, propose");
+    expect(output).toContain("add [routes]");
+    log.mockRestore();
+  });
+
+  it("rejects an unsupported template name", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(run(["add", "--template", "unknown"])).resolves.toBe(1);
 
-    expect(error).toHaveBeenCalledWith("add accepts only --force or --template agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json.");
+    expect(error).toHaveBeenCalledWith("--template must be one of: agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json.");
+    error.mockRestore();
+  });
+
+  it("rejects an unknown route passed to add", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["add", "frobnicate"])).resolves.toBe(1);
+
+    expect(error).toHaveBeenCalledWith("Unknown route: frobnicate. Valid routes: refine, implement, direct, apply-review, merge-gate, audit, propose.");
+    error.mockRestore();
+  });
+
+  it("rejects a duplicate route", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["add", "refine", "refine"])).resolves.toBe(1);
+
+    expect(error).toHaveBeenCalledWith("Duplicate route: refine.");
     error.mockRestore();
   });
 
@@ -125,6 +162,146 @@ describe("workflows CLI", () => {
 
     await expect(run(["search", "a", "b"])).resolves.toBe(1);
     expect(error).toHaveBeenCalledWith("search requires exactly one query argument.");
+    error.mockRestore();
+  });
+
+  it("add with no routes and no template calls installCatalog with empty selectedRoutes", async () => {
+    const { installCatalog, installTemplate } = mockInstallers();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add"])).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledOnce();
+    expect(installCatalog).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ selectedRoutes: [] }));
+    expect(installTemplate).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  it("add with explicit routes passes those routes to installCatalog", async () => {
+    const { installCatalog, installTemplate } = mockInstallers();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "implement", "refine", "direct"])).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledOnce();
+    expect(installCatalog).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ selectedRoutes: ["implement", "refine", "direct"] }),
+    );
+    expect(installTemplate).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  it("add --force passes force flag to installCatalog", async () => {
+    const { installCatalog } = mockInstallers();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "--force"])).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ force: true, selectedRoutes: [] }));
+    log.mockRestore();
+  });
+
+  it("add with routes and --force passes both", async () => {
+    const { installCatalog } = mockInstallers();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "refine", "implement", "--force"])).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ force: true, selectedRoutes: ["refine", "implement"] }),
+    );
+    log.mockRestore();
+  });
+
+  it("add with routes and template calls both installCatalog and installTemplate", async () => {
+    const { installCatalog, installTemplate } = mockInstallers();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "refine", "--template", "agentics-checks"])).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledOnce();
+    expect(installCatalog).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ selectedRoutes: ["refine"] }),
+    );
+    expect(installTemplate).toHaveBeenCalledOnce();
+    expect(installTemplate).toHaveBeenCalledWith(expect.any(String), "agentics-checks", expect.any(Object));
+    log.mockRestore();
+  });
+
+  it("add with template only calls installTemplate but not installCatalog", async () => {
+    const { installCatalog, installTemplate } = mockInstallers();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "--template", "agentics-checks"])).resolves.toBe(0);
+
+    expect(installCatalog).not.toHaveBeenCalled();
+    expect(installTemplate).toHaveBeenCalledOnce();
+    expect(installTemplate).toHaveBeenCalledWith(expect.any(String), "agentics-checks", expect.any(Object));
+    log.mockRestore();
+  });
+
+  it("add with routes and template and force passes all options", async () => {
+    const { installCatalog, installTemplate } = mockInstallers();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "refine", "implement", "--template", "agentics-checks", "--force"])).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ force: true, selectedRoutes: ["refine", "implement"] }),
+    );
+    expect(installTemplate).toHaveBeenCalledWith(
+      expect.any(String),
+      "agentics-checks",
+      expect.objectContaining({ force: true }),
+    );
+    log.mockRestore();
+  });
+
+  it("add with conflict and no force exits 1", async () => {
+    const { installCatalog } = mockInstallers();
+    installCatalog.mockResolvedValue({ installed: [], conflicts: ["opencode.ci.json"] });
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["add"])).resolves.toBe(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("Catalog conflicts found"));
+    error.mockRestore();
+  });
+
+  it("add with conflict and --force still succeeds", async () => {
+    const { installCatalog } = mockInstallers();
+    installCatalog.mockResolvedValue({ installed: ["opencode.ci.json"], conflicts: ["opencode.ci.json"] });
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "--force"])).resolves.toBe(0);
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  it("add with --template but missing name produces an error", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["add", "--template"])).resolves.toBe(1);
+    expect(error).toHaveBeenCalledWith("--template requires a name.");
+    error.mockRestore();
+  });
+
+  it("add with multiple --template flags produces an error", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["add", "--template", "agentics-checks", "--template", "agentics-maintenance"])).resolves.toBe(1);
+    expect(error).toHaveBeenCalledWith("--template can only be specified once.");
+    error.mockRestore();
+  });
+
+  it("add with unknown flag produces an error", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["add", "--unknown"])).resolves.toBe(1);
+    expect(error).toHaveBeenCalledWith("Unknown option: --unknown");
     error.mockRestore();
   });
 });

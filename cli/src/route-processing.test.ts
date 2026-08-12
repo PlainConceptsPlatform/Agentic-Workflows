@@ -288,6 +288,22 @@ describe("processRoutes", () => {
     expect(result).toBe(files);
   });
 
+  it("returns the same map when no routes are selected (keeps full router/classifier/matrix)", () => {
+    const files = new Map<string, string>([
+      [".github/workflows/work-router.yml", ROUTER_YAML],
+      [".github/actions/classify-route/classify-route.sh", CLASSIFIER_SH],
+      [".github/actions/verify-route-matrix/verify-route-matrix.sh", MATRIX_SH],
+    ]);
+
+    const result = processRoutes(files, []);
+
+    expect(result).toBe(files);
+    const router = result.get(".github/workflows/work-router.yml")!;
+    expect(router).toContain("call-propose");
+    expect(router).toContain("call-audit");
+    expect(router).toContain("- propose");
+  });
+
   it("strips propose from all three files when unselected", () => {
     const files = new Map<string, string>([
       [".github/workflows/work-router.yml", ROUTER_YAML],
@@ -363,5 +379,18 @@ describe("excludedWorkerFiles", () => {
     const excluded = excludedWorkerFiles([...routeNames]);
 
     expect(excluded.size).toBe(0);
+  });
+
+  it("returns all worker files when no routes are selected", () => {
+    const excluded = excludedWorkerFiles([]);
+
+    expect(excluded.size).toBe(7);
+    expect(excluded.has("agent-refine.md")).toBe(true);
+    expect(excluded.has("agent-implement.md")).toBe(true);
+    expect(excluded.has("agent-direct.md")).toBe(true);
+    expect(excluded.has("agent-apply-review.md")).toBe(true);
+    expect(excluded.has("agent-merge-gate.md")).toBe(true);
+    expect(excluded.has("agent-audit.md")).toBe(true);
+    expect(excluded.has("agent-propose.md")).toBe(true);
   });
 });

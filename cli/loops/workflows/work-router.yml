@@ -312,6 +312,39 @@ jobs:
       BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
       BOT_PRIVATE_KEY: ${{ secrets.BOT_PRIVATE_KEY }}
 
+  bot-approve:
+    needs: classify
+    if: >
+      needs.classify.outputs.route == 'bot-approve' &&
+        (github.actor == 'app/github-actions' || github.actor == 'platform-devbox[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Approve pending workflow runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t run_ids < <(
+            gh api "repos/$REPO/actions/runs?status=action_required&branch=$BRANCH" \
+              --jq '.workflow_runs[].id'
+          )
+
+          if [ "${#run_ids[@]}" -eq 0 ]; then
+            echo "No runs awaiting approval on branch $BRANCH"
+            exit 0
+          fi
+
+          for run_id in "${run_ids[@]}"; do
+            echo "Approving run $run_id"
+            gh api "repos/$REPO/actions/runs/$run_id/approve" --method POST
+          done
+
   audit-close:
     needs: classify
     if: needs.classify.outputs.route == 'audit-close'

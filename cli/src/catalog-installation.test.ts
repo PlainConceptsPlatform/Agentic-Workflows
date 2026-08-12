@@ -22,6 +22,37 @@ describe("catalog installation", () => {
     expect(catalogSourcePath(join(packageDirectory, "dist", "catalog-installation.js"))).toBe(join(packageDirectory, "loops"));
   });
 
+  it("installCatalog with empty selectedRoutes installs mandatory and infrastructure files but no worker .md files", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "name: Check\n",
+      "workflows/agent-refine.md": "# Refine\n",
+      "workflows/agent-implement.md": "# Implement\n",
+      "workflows/agent-direct.md": "# Direct\n",
+      "workflows/agent-audit.md": "# Audit\n",
+      "workflows/agent-propose.md": "# Propose\n",
+      "workflows/agent-apply-review.md": "# Apply Review\n",
+      "workflows/agent-merge-gate.md": "# Merge Gate\n",
+      "workflows/shared/defaults.md": "defaults\n",
+      "workflows/work-router.yml": "name: Router\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    const result = await installCatalog(repositoryPath, { sourcePath, selectedRoutes: [] });
+
+    expect(result.installed).toContain("opencode.ci.json");
+    expect(result.installed).toContain("scripts/compile-agent-workflows.mjs");
+    expect(result.installed).toContain(".github/actions/check/action.yml");
+    expect(result.installed.some((f) => f.endsWith("shared/defaults.md"))).toBe(true);
+    expect(result.installed.some((f) => f.endsWith("work-router.yml"))).toBe(true);
+    // No worker .md files
+    expect(result.installed).not.toContain(".github/workflows/agent-refine.md");
+    expect(result.installed).not.toContain(".github/workflows/agent-implement.md");
+    expect(result.installed).not.toContain(".github/workflows/agent-audit.md");
+    expect(result.installed).not.toContain(".github/workflows/agent-propose.md");
+  });
+
   it("installs package-owned loops files including mandatory opencode.ci.json and compile script", async () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",

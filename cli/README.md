@@ -10,7 +10,7 @@ The primary entrypoint is the interactive TUI. Run it with no arguments:
 npx @plainconceptsplatform/workflows
 ```
 
-The TUI lists all routes and templates with install status. Arrow keys navigate, space toggles, Enter installs. Selecting any route installs the full managed catalog plus mandatory `opencode.ci.json` and `scripts/compile-agent-workflows.mjs`. Selecting only templates still installs those mandatory files.
+The TUI lists all routes and templates with install status. Arrow keys navigate, space toggles, Enter installs. Selecting routes installs only those route workers plus mandatory files (opencode.ci.json, compile script, shared imports, actions, router, classifier, route matrix). Selecting only templates installs just those templates.
 
 ## Install
 
@@ -35,7 +35,18 @@ pnpm exec workflows add
 
 `init` inspects the repository and reports its stack and visibility. It does not create or manage repository configuration or a manifest.
 
-`add` installs package-owned files including the mandatory `opencode.ci.json` and `scripts/compile-agent-workflows.mjs`. It stops when a managed file differs. Use `pnpm exec workflows update --force` only when you intend to replace managed workflow files.
+`add` installs mandatory files (opencode.ci.json, compile script, shared imports, actions, router, classifier, route matrix) when called with no route arguments. Pass route names as positional arguments to install specific route workers alongside the mandatory files:
+
+```bash
+workflows add                        # mandatory files only, no worker .md files
+workflows add implement refine direct  # those route workers plus mandatory files
+workflows add --template agentics-checks  # named template only (no mandatory files)
+workflows add refine --template agentics-checks --force  # routes + template + mandatory, overwriting conflicts
+```
+
+Route names: refine, implement, direct, apply-review, merge-gate, audit, propose. Unknown arguments produce an error.
+
+Use `workflows update --force` to force-overwrite managed files that differ from the package source.
 
 Install optional standalone templates with `add --template`. Available templates are `agentics-checks`, `agentics-maintenance`, `app-ci-dotnet-next`, and `app-ci-node-monorepo`. CI templates are stack-specific copies, not a combined template. Edit their top-level `env:` values for repository paths, package names, and commands.
 
