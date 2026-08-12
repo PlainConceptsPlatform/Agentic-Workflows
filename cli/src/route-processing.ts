@@ -111,7 +111,6 @@ export function processRoutes(
   files: Map<string, string>,
   selectedRoutes: readonly RouteName[],
 ): Map<string, string> {
-  if (selectedRoutes.length === 0) return files;
   const excludedRoutes = routeNames.filter((r) => !selectedRoutes.includes(r));
   if (excludedRoutes.length === 0) return files;
 

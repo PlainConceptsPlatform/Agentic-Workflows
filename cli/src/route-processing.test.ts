@@ -288,7 +288,7 @@ describe("processRoutes", () => {
     expect(result).toBe(files);
   });
 
-  it("returns the same map when no routes are selected (keeps full router/classifier/matrix)", () => {
+  it("strips every worker route when no routes are selected", () => {
     const files = new Map<string, string>([
       [".github/workflows/work-router.yml", ROUTER_YAML],
       [".github/actions/classify-route/classify-route.sh", CLASSIFIER_SH],
@@ -297,11 +297,19 @@ describe("processRoutes", () => {
 
     const result = processRoutes(files, []);
 
-    expect(result).toBe(files);
     const router = result.get(".github/workflows/work-router.yml")!;
-    expect(router).toContain("call-propose");
-    expect(router).toContain("call-audit");
-    expect(router).toContain("- propose");
+    expect(router).not.toContain("call-propose");
+    expect(router).not.toContain("call-audit");
+    expect(router).not.toContain("- propose");
+    expect(router).not.toContain("- refine");
+
+    const classifier = result.get(".github/actions/classify-route/classify-route.sh")!;
+    expect(classifier).not.toContain("readonly PROPOSE_CRON");
+    expect(classifier).not.toContain("readonly AUDIT_CRON");
+
+    const matrix = result.get(".github/actions/verify-route-matrix/verify-route-matrix.sh")!;
+    expect(matrix).toContain("excluded route 'propose'");
+    expect(matrix).toContain("excluded route 'refine'");
   });
 
   it("strips propose from all three files when unselected", () => {
