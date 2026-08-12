@@ -18,7 +18,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "bin": {
-    "platform-workflows": "./dist/index.js"
+    "workflows": "./dist/index.js"
   },
   "files": [
     "dist",
