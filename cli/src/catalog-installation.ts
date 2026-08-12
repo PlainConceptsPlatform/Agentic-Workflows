@@ -21,15 +21,14 @@ interface CatalogFile {
   readonly managed: boolean;
 }
 
-const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const sourceMappings = [
   ["actions", ".github/actions"],
   ["workflows", ".github/workflows"],
   ["scripts", "scripts"],
 ] as const;
 
-export function catalogSourcePath(): string {
-  return join(packageDirectory, "loops");
+export function catalogSourcePath(modulePath = fileURLToPath(import.meta.url)): string {
+  return resolve(dirname(modulePath), "..", "loops");
 }
 
 export async function installCatalog(

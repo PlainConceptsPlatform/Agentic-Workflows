@@ -275,13 +275,13 @@ timeout-minutes: 180
 6. Verify before you conclude, if you changed code. From the repository root:
 
     ```
-    $${{ env.VERIFY_COMMANDS }}
+    ${{ env.VERIFY_COMMANDS }}
     ```
 
     Follow these repository-specific rules:
 
     ```
-    $${{ env.REPO_RULES }}
+    ${{ env.REPO_RULES }}
     ```
 
     If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip

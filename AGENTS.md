@@ -11,7 +11,13 @@
 - Before changing a workflow loop, load the intended author skill at `skills/workflow-author/SKILL.md`.
 - Before configuring or consuming a loop, load the intended consumer skill at `skills/workflow-consumer/SKILL.md`.
 - Before changing CLI behavior, load the intended CLI skill at `skills/cli/SKILL.md`.
-- These paths name planned skills. Their content is not yet available.
+
+## Consumer prerequisite
+
+- Consumer repositories must install and configure `PlainConceptsPlatform/opencode-onboard` before using or compiling loops. Loop workers invoke the skills and commands it provides.
+- Before compilation, verify the required `opencode-onboard` skills and commands are available in the consumer repository.
+- For one-off consumer CLI use, recommend `npx @plainconceptsplatform/workflows@latest platform-workflows <init|add|update>`.
+- `pnpm exec platform-workflows <init|add|update>` is optional only when `@plainconceptsplatform/workflows` is installed as a project-local development dependency.
 
 ## Generated files
 

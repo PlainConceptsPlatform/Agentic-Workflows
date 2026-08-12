@@ -9,12 +9,22 @@ Use in consumer repositories, never to alter this source repository's loops.
 
 ## Install or update
 
-CLI is optional. Install or update it with the package manager, then run:
+Before installing workflows, install and configure `PlainConceptsPlatform/opencode-onboard` in the consumer repository. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available before compiling workflows.
+
+For one-off use, run:
 
 ```sh
-platform-workflows init [--visibility public|private]
-platform-workflows add
-platform-workflows update
+npx @plainconceptsplatform/workflows@latest platform-workflows init
+npx @plainconceptsplatform/workflows@latest platform-workflows add
+npx @plainconceptsplatform/workflows@latest platform-workflows update
+```
+
+For a project-local development dependency, install it with `pnpm add -D @plainconceptsplatform/workflows`, then run:
+
+```sh
+pnpm exec platform-workflows init [--visibility public|private]
+pnpm exec platform-workflows add
+pnpm exec platform-workflows update
 ```
 
 `add` and `update` stop on changed package-managed files. Inspect conflicts first; use `--force` only to intentionally replace package-owned files.

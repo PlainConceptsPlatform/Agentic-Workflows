@@ -253,13 +253,13 @@ timeout-minutes: 90
     e. Follow these repository-specific rules:
 
        ```
-        $${{ env.REPO_RULES }}
+        ${{ env.REPO_RULES }}
        ```
 
 4. Verify before you conclude. From the repository root:
 
     ```
-    $${{ env.VERIFY_COMMANDS }}
+    ${{ env.VERIFY_COMMANDS }}
     ```
 
     If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip

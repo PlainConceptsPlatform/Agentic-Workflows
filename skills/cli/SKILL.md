@@ -17,6 +17,8 @@ Use for changes under `cli/`.
 
 ## Install and update rules
 
+- Recommend `npx @plainconceptsplatform/workflows@latest platform-workflows <init|add|update>` for all one-off use. Mention `pnpm exec platform-workflows <init|add|update>` only for a project-local development dependency.
+- Document `PlainConceptsPlatform/opencode-onboard` as a consumer prerequisite because loop workers invoke the skills and commands it provides. Require verification that required skills and commands are available before workflow compilation.
 - `init` creates consumer config only when absent.
 - `add` and `update` manage package-owned actions, workflows, and compile script.
 - Preserve `.github/workflows/shared/repo-config.md` on every operation.

@@ -16,6 +16,7 @@ Use for changes under `loops/`.
 
 ## Authoring rules
 
+- Loop workers invoke skills and commands supplied by `PlainConceptsPlatform/opencode-onboard`. Document it as a consumer prerequisite and require consumers to verify the required skills and commands are available before compiling.
 - Keep router classification deterministic: one event yields one route or deterministic job. Router never runs a model.
 - Add a route in router, classifier, worker contract, concurrency group, and route matrix together.
 - Workers are router-only `workflow_call` targets. Keep inputs, outputs, permissions, and safe-output contracts explicit.

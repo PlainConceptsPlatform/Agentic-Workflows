@@ -315,7 +315,7 @@ timeout-minutes: 45
     repository root. Follow these repository-specific rules:
 
     ```
-    $${{ env.REPO_RULES }}
+    ${{ env.REPO_RULES }}
     ```
 
  6. Run the repository verification commands below. The issue context at
@@ -323,7 +323,7 @@ timeout-minutes: 45
     fails, fix what you broke and run it again. Do not push a branch that does not pass.
 
     ```
-    $${{ env.VERIFY_COMMANDS }}
+    ${{ env.VERIFY_COMMANDS }}
     ```
 
 7. Call `push_to_pull_request_branch` to push the verified changes. Do not merge, do not

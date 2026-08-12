@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { installCatalog, repositoryConfigRelativePath } from "./catalog-installation.js";
+import { catalogSourcePath, installCatalog, repositoryConfigRelativePath } from "./catalog-installation.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -13,6 +13,15 @@ afterEach(async () => {
 });
 
 describe("catalog installation", () => {
+  it("resolves loops beside built package files", async () => {
+    const packageDirectory = await createDirectory({
+      "dist/catalog-installation.js": "export {};\n",
+      "loops/workflows/agent-check.md": "# Check\n",
+    });
+
+    expect(catalogSourcePath(join(packageDirectory, "dist", "catalog-installation.js"))).toBe(join(packageDirectory, "loops"));
+  });
+
   it("installs package-owned loops files and initializes repository config", async () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",

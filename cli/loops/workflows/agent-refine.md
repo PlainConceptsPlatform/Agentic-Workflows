@@ -276,7 +276,7 @@ timeout-minutes: 30
    Apply repository-specific requirements before finalizing the story:
 
    ```
-    $${{ env.REPO_RULES }}
+    ${{ env.REPO_RULES }}
    ```
 
  4. Load `@humanizer` and prepare the complete replacement issue body as valid Markdown.

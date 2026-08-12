@@ -124,7 +124,7 @@ timeout-minutes: 45
  2. Apply these repository-specific rules while auditing:
 
     ```
-    $${{ env.REPO_RULES }}
+    ${{ env.REPO_RULES }}
     ```
 
     From the audit report, find **5 to 7 problems**. For each finding, verify it meets ALL

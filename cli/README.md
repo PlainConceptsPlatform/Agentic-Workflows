@@ -4,6 +4,18 @@ Install and update shared GitHub Agentic Workflows for Plain Concepts Platform r
 
 ## Install
 
+Before installing workflows, install and configure [`PlainConceptsPlatform/opencode-onboard`](https://github.com/PlainConceptsPlatform/opencode-onboard) in the consumer repository. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available before compiling workflows.
+
+For one-off use, prefer:
+
+```bash
+npx @plainconceptsplatform/workflows@latest platform-workflows init
+npx @plainconceptsplatform/workflows@latest platform-workflows add
+npx @plainconceptsplatform/workflows@latest platform-workflows update
+```
+
+For a project-local development dependency:
+
 ```bash
 pnpm add -D @plainconceptsplatform/workflows
 pnpm exec platform-workflows init

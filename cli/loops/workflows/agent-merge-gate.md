@@ -378,7 +378,7 @@ timeout-minutes: 60
    Apply these repository-specific rules when assessing or remediating the pull request:
 
    ```
-    $${{ env.REPO_RULES }}
+    ${{ env.REPO_RULES }}
    ```
 
 4. Assess the risk of merging, as a reviewer would. Read `/tmp/gh-aw/agent/diff.patch` in full
@@ -416,7 +416,7 @@ timeout-minutes: 60
     disable a check, or push an unverified guess.
 
     ```
-    $${{ env.VERIFY_COMMANDS }}
+    ${{ env.VERIFY_COMMANDS }}
     ```
 
    Call `push_to_pull_request_branch` (pr_number: ${{ needs.subject.outputs.pr }}) to push
