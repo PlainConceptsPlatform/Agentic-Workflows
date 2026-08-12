@@ -1,54 +1,70 @@
 ---
 name: workflow-consumer
-description: Install, configure, and compile Agentic Workflows in a consumer repository.
+description: Install, configure, compile, and safely update Agentic Workflow loops in a consumer repository.
 ---
 
 # Workflow consumer
 
-Use in consumer repositories, never to alter this source repository's loops.
+Use in a repository consuming this package. Do not use it to alter this repository's `loops/` source. This skill is self-contained.
 
-## Install or update
+## Before install
 
-Before installing workflows, install and configure `PlainConceptsPlatform/opencode-onboard` in the consumer repository. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available before compiling workflows.
+Install and configure `PlainConceptsPlatform/opencode-onboard` in consumer repository. Workers invoke skills and commands it provides. Before compilation, verify worker-required skills and commands exist locally.
 
-For one-off use, run:
-
-```sh
-npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows init
-npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows add
-npx --yes --package @plainconceptsplatform/workflows@latest platform-workflows update
-```
-
-For a project-local development dependency, install it with `pnpm add -D @plainconceptsplatform/workflows`, then run:
+Use one-off CLI invocation exactly as shown:
 
 ```sh
-pnpm exec platform-workflows init [--visibility public|private]
-pnpm exec platform-workflows add
-pnpm exec platform-workflows update
+npx --yes --package @plainconceptsplatform/workflows@latest workflows init
+npx --yes --package @plainconceptsplatform/workflows@latest workflows add
+npx --yes --package @plainconceptsplatform/workflows@latest workflows update
 ```
 
-`add` and `update` stop on changed package-managed files. Inspect conflicts first; use `--force` only to intentionally replace package-owned files.
-Package-managed files carry ownership headers with their source path. `update --force` can overwrite consumer edits to them.
+For a project-local development dependency only, install package first and use:
 
-## Manual layout
+```sh
+pnpm exec workflows init
+pnpm exec workflows add
+pnpm exec workflows update
+```
 
-Copy `loops/` as consumer `.github/` equivalents:
+`init` inspects repository and visibility without writing workflow files. `add` installs managed loop files. `update` refreshes them.
 
-- `loops/actions/` to `.github/actions/`
-- `loops/workflows/` to `.github/workflows/`
-- `loops/scripts/compile-agent-workflows.mjs` to `scripts/`
+## Select templates deliberately
 
-Each worker is standalone. Edit its top-level `env:` values directly after copying when the
-consumer needs different endpoint, model, labels, paths, verification commands, or prompt rules.
+Templates are optional and independent of managed loops. Add only template matching repository:
 
-## Configure and compile
+```sh
+npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template agentics-checks
+npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template agentics-maintenance
+npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template app-ci-dotnet-next
+npx --yes --package @plainconceptsplatform/workflows@latest workflows add --template app-ci-node-monorepo
+```
 
-Set repository visibility, trusted actors, CI and branches, enabled routes and schedules, setup/network access, verification commands, and agent rules in copied worker frontmatter and workflow source. Each worker's `OPENAI_BASE_URL` defaults to `https://forge.plainconcepts.com/v1`. OpenCode workers retain their engine endpoint because `gh aw` routes them through its runtime proxy.
+Use `agentics-checks` to validate agentic sources and generated locks in pull requests. Use `agentics-maintenance` only when repository wants pre-generated gh-aw maintenance workflow. Select one CI template only when its technology and commands suit repository. Templates are copied to `.github/workflows/` and consumer-owned after installation.
 
-In consumer repository, run:
+## Customise standalone workers
+
+Managed files include ownership headers and source paths. Read header before edits. `add` and `update` stop on changed managed files; inspect diff first. Use `--force` only when intentionally replacing a managed file. Back up or move consumer changes before force update.
+
+There is no shared `repo-config` file. Every `agent-*.md` worker is standalone. After installation, edit that worker's top-level `env:` values directly for labels, paths, prompt rules, endpoint, model-related settings, and verification commands. Values have concrete defaults, including `OPENAI_BASE_URL: https://forge.plainconcepts.com/v1`. Keep worker-specific configuration in worker frontmatter; do not create a shared repository configuration layer.
+
+Shared imports can carry mechanics, but worker frontmatter owns policy: environment defaults, permissions, engine, model, runners, Safe Outputs, and timeout. Preserve ownership headers unless deliberately making the file consumer-owned.
+
+## Compile and verify
+
+Compile in consumer repository:
 
 ```sh
 node scripts/compile-agent-workflows.mjs
 ```
 
-Commit generated `*.lock.yml` files and `.github/aw/actions-lock.json` in consumer repository. They are generated consumer artifacts, never source-loop files.
+Commit generated `*.lock.yml` and `.github/aw/actions-lock.json` in consumer repository. They are generated consumer artifacts, not source package files. Run repository's agentic workflow checks and inspect compiler warnings. Confirm worker inputs match router calls, every worker has concrete top-level environment defaults, and no generated file has been hand-edited.
+
+Read references as needed:
+
+| File | Use for |
+| --- | --- |
+| `references/install.md` | Layout, commands, ownership, updates |
+| `references/customize.md` | Worker environment and migration from shared configuration |
+| `references/templates.md` | Optional template choice and tailoring |
+| `references/compile.md` | Compilation, locks, verification, rollback |
