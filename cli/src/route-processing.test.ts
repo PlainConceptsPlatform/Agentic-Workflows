@@ -304,12 +304,11 @@ describe("processRoutes", () => {
     expect(router).not.toContain("- refine");
 
     const classifier = result.get(".github/actions/classify-route/classify-route.sh")!;
-    expect(classifier).not.toContain("readonly PROPOSE_CRON");
-    expect(classifier).not.toContain("readonly AUDIT_CRON");
+    expect(classifier).toBe(CLASSIFIER_SH);
 
     const matrix = result.get(".github/actions/verify-route-matrix/verify-route-matrix.sh")!;
-    expect(matrix).toContain("excluded route 'propose'");
-    expect(matrix).toContain("excluded route 'refine'");
+    expect(matrix).toContain("Route matrix: selected routes valid");
+    expect(matrix).toContain("for route in refine implement direct apply-review merge-gate audit propose");
   });
 
   it("strips propose from all three files when unselected", () => {
@@ -328,11 +327,11 @@ describe("processRoutes", () => {
     expect(router).not.toMatch(/^\s+- propose$/m);
 
     const classifier = result.get(".github/actions/classify-route/classify-route.sh")!;
-    expect(classifier).not.toContain("readonly PROPOSE_CRON");
-    expect(classifier).not.toContain('"$PROPOSE_CRON")');
+    expect(classifier).toBe(CLASSIFIER_SH);
 
     const matrix = result.get(".github/actions/verify-route-matrix/verify-route-matrix.sh")!;
-    expect(matrix).toContain("excluded route 'propose'");
+    expect(matrix).toContain("for route in refine implement direct apply-review merge-gate audit");
+    expect(matrix).toContain("for route in propose");
   });
 
   it("strips audit from all three files when unselected", () => {
@@ -350,8 +349,7 @@ describe("processRoutes", () => {
     expect(router).not.toContain('cron: "17 1 * * 1"');
 
     const classifier = result.get("classify-route.sh")!;
-    expect(classifier).not.toContain("readonly AUDIT_CRON");
-    expect(classifier).not.toContain('"$AUDIT_CRON")');
+    expect(classifier).toBe(CLASSIFIER_SH);
   });
 
   it("processes multiple excluded routes at once", () => {

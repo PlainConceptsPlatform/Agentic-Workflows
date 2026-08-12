@@ -122,18 +122,49 @@ export function processRoutes(
       result.set(routerKey, stripRouteFromRouter(result.get(routerKey)!, route));
     }
 
-    const classifierKey = findFileKey(result, "classify-route.sh");
-    if (classifierKey !== undefined) {
-      result.set(classifierKey, stripRouteFromClassifier(result.get(classifierKey)!, route));
-    }
-
     const matrixKey = findFileKey(result, "verify-route-matrix.sh");
     if (matrixKey !== undefined) {
       result.set(matrixKey, addRouteExclusion(result.get(matrixKey)!, route));
     }
   }
 
+  const matrixKey = findFileKey(result, "verify-route-matrix.sh");
+  if (matrixKey !== undefined) {
+    result.set(matrixKey, createRouteMatrix(selectedRoutes));
+  }
+
   return result;
+}
+
+function createRouteMatrix(selectedRoutes: readonly RouteName[]): string {
+  const selected = selectedRoutes.join(" ");
+  const excluded = routeNames.filter((route) => !selectedRoutes.includes(route)).join(" ");
+
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+HERE="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+ROUTER_YML="\${HERE}/../../workflows/work-router.yml"
+CLASSIFIER="\${HERE}/../classify-route/classify-route.sh"
+
+bash -n "$CLASSIFIER"
+
+for route in ${selected}; do
+  grep -q "route == '$route'" "$ROUTER_YML" || {
+    echo "FAIL: selected route '$route' has no router job" >&2
+    exit 1
+  }
+done
+
+for route in ${excluded}; do
+  if grep -q "route == '$route'" "$ROUTER_YML"; then
+    echo "FAIL: excluded route '$route' remains in router" >&2
+    exit 1
+  fi
+done
+
+echo "Route matrix: selected routes valid"
+`;
 }
 
 export function excludedWorkerFiles(selectedRoutes: readonly RouteName[]): Set<string> {
