@@ -102,7 +102,7 @@ description: test
     expect(result).toContain('VERIFY_COMMANDS: "dotnet restore && dotnet build -c Release --no-restore && dotnet test"');
   });
 
-  it("does not inject when verifyCommands is pnpm verify (the default)", () => {
+  it("injects pnpm verification when no .slnx is present", () => {
     const content = `---
 env:
   REPO_RULES: "some rules"
@@ -113,7 +113,7 @@ env:
 
     const result = injectStackEnv(content, defaults);
 
-    expect(result).not.toContain("VERIFY_COMMANDS");
+    expect(result).toContain('VERIFY_COMMANDS: "pnpm verify"');
   });
 });
 
@@ -153,23 +153,23 @@ describe("generateOpencodeCi", () => {
     expect(result).toContain("dotnet restore apps/api/Numa.slnx");
   });
 
-  it("adds OpenSpec CLI install step when openspec/ directory exists", () => {
+  it("does not add an OpenSpec CLI install step when openspec/ directory exists", () => {
     const result = generateOpencodeCi(OPENCODE_CI_MD, makeInspection({
       openSpec: true,
     }));
 
-    expect(result).toContain("Install OpenSpec CLI");
-    expect(result).toContain("@openspec/cli");
+    expect(result).not.toContain("Install OpenSpec CLI");
+    expect(result).not.toContain("@openspec/cli");
   });
 
-  it("adds both NuGet and OpenSpec steps when both are detected", () => {
+  it("adds NuGet steps without adding an OpenSpec CLI install step", () => {
     const result = generateOpencodeCi(OPENCODE_CI_MD, makeInspection({
       solutionFiles: ["app.slnx"],
       openSpec: true,
     }));
 
     expect(result).toContain("Cache NuGet packages");
-    expect(result).toContain("Install OpenSpec CLI");
+    expect(result).not.toContain("Install OpenSpec CLI");
   });
 
   it("does not add NuGet steps when no .slnx is present", () => {

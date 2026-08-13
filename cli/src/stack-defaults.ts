@@ -32,8 +32,6 @@ export function generateStackDefaults(inspection: RepositoryInspection): StackDe
 export function injectStackEnv(content: string, defaults: StackDefaults): string {
   let result = content;
 
-  if (defaults.verifyCommands === "pnpm verify") return result;
-
   if (result.includes("VERIFY_COMMANDS:")) {
     result = result.replace(
       /  VERIFY_COMMANDS: ".*"/,
@@ -69,17 +67,6 @@ export function generateOpencodeCi(
 `;
 
     result = insertBeforeMarker(result, nugetSteps, "  - name: Install workspace dependencies");
-  }
-
-  if (inspection.stackHints.openSpec) {
-    const openspecStep = `  - name: Install OpenSpec CLI
-    run: |
-      set -euo pipefail
-      npm install -g @openspec/cli@latest
-      openspec --version
-`;
-
-    result = insertBeforeMarker(result, openspecStep, "  - name: Install workspace dependencies");
   }
 
   if (inspection.stackHints.packageJson && !result.includes("--legacy-peer-deps")) {
