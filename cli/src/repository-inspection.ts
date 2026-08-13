@@ -82,11 +82,31 @@ export function parseVisibility(value: string | undefined): RepositoryVisibility
 }
 
 async function findSolutionFiles(repositoryPath: string): Promise<string[]> {
-  const entries = await readdir(repositoryPath, { recursive: true, withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".slnx"))
-    .map((entry) => entry.parentPath === undefined ? entry.name : join(entry.parentPath, entry.name))
-    .sort();
+  const results: string[] = [];
+  await scanForSlnx(repositoryPath, "", results, 0);
+  return results.sort();
+}
+
+const MAX_DEPTH = 5;
+const SKIP_DIRS = new Set(["node_modules", ".git", ".next", "dist", "out", "build", ".turbo", ".cache"]);
+
+async function scanForSlnx(root: string, relativePath: string, results: string[], depth: number): Promise<void> {
+  if (depth >= MAX_DEPTH) return;
+  const currentPath = join(root, relativePath);
+  let entries: import("node:fs").Dirent[];
+  try {
+    entries = await readdir(currentPath, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      await scanForSlnx(root, join(relativePath, entry.name), results, depth + 1);
+    } else if (entry.isFile() && entry.name.endsWith(".slnx")) {
+      results.push(relativePath === "" ? entry.name : join(relativePath, entry.name));
+    }
+  }
 }
 
 async function pathExists(path: string): Promise<boolean> {

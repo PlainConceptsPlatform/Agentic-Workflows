@@ -30,7 +30,7 @@ describe("repository inspection", () => {
       stackHints: {
         packageJson: true,
         pnpmLockfile: true,
-        solutionFiles: [join(repositoryPath, "apps", "api", "Numa.slnx")],
+        solutionFiles: [join("apps", "api", "Numa.slnx")],
         openSpec: true,
       },
     });
