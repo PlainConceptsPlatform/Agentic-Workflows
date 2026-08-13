@@ -84,12 +84,13 @@ describe("workflows CLI", () => {
     expect(output).toContain("implement");
     expect(output).toContain("agentics-checks");
     expect(output).toContain("app-ci-dotnet-next");
+    expect(output).toContain("github-release");
     // None installed: all [ ]
     const installedCount = (output.match(/\[x\]/g) ?? []).length;
     expect(installedCount).toBe(0);
-    // 7 routes + 5 templates = 12 entries
+    // 7 routes + 6 templates = 13 entries
     const uninstalledCount = (output.match(/\[ \]/g) ?? []).length;
-    expect(uninstalledCount).toBe(12);
+    expect(uninstalledCount).toBe(13);
     log.mockRestore();
   });
 

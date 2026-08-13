@@ -30,7 +30,7 @@ describe("workflow catalog", () => {
   });
 
   it("lists supported optional templates", () => {
-    expect(templateNames).toEqual(["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo", "opencode.ci.json"]);
+    expect(templateNames).toEqual(["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo", "github-release", "opencode.ci.json"]);
   });
 
   it("gives every catalog template a non-empty description and file", () => {

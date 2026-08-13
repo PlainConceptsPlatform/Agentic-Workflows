@@ -48,7 +48,7 @@ Route names: refine, implement, direct, apply-review, merge-gate, audit, propose
 
 Use `workflows update --force` to force-overwrite managed files that differ from the package source.
 
-Install optional standalone templates with `add --template`. Available templates are `agentics-checks`, `agentics-maintenance`, `app-ci-dotnet-next`, and `app-ci-node-monorepo`. CI templates are stack-specific copies, not a combined template. Edit their top-level `env:` values for repository paths, package names, and commands.
+Install optional standalone templates with `add --template`. Available templates are `agentics-checks`, `agentics-maintenance`, `app-ci-dotnet-next`, `app-ci-node-monorepo`, and `github-release`. CI templates are stack-specific copies, not a combined template. `github-release` publishes generated release notes when a `v*` tag is pushed. Edit their top-level `env:` values for repository paths, package names, and commands.
 
 ## List and search
 

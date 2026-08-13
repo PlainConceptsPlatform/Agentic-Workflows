@@ -176,6 +176,7 @@ describe("catalog installation", () => {
       "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",
       "templates/agentics/agentics-checks.yml": "name: Agentics checks\n",
       "templates/ci/app-ci-node-monorepo.yml": "name: Node CI\n",
+      "templates/release/github-release.yml": "name: Publish GitHub release\n",
     });
     const repositoryPath = await createDirectory({});
 
@@ -187,6 +188,10 @@ describe("catalog installation", () => {
     });
     await expect(installTemplate(repositoryPath, "app-ci-node-monorepo", { sourcePath })).resolves.toEqual({
       installed: [".github/workflows/app-ci-node-monorepo.yml"],
+      conflicts: [],
+    });
+    await expect(installTemplate(repositoryPath, "github-release", { sourcePath })).resolves.toEqual({
+      installed: [".github/workflows/github-release.yml"],
       conflicts: [],
     });
   });

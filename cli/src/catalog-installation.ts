@@ -213,7 +213,7 @@ export async function runCompileIfAvailable(repositoryPath: string): Promise<voi
 function catalogTemplateMeta(template: TemplateName): { directory: string; file: string; target: string } {
   const entry = catalogTemplates.find((item) => item.name === template);
   if (entry === undefined) throw new Error(`Unknown template: ${template}`);
-  const directory = template.startsWith("opencode") ? "opencode" : template.startsWith("app-ci-") ? "ci" : "agentics";
+  const directory = template.startsWith("opencode") ? "opencode" : template.startsWith("app-ci-") ? "ci" : template === "github-release" ? "release" : "agentics";
   const isWorkflow = entry.file.endsWith(".yml");
   const target = template === "app-ci-dotnet-next"
     ? ".github/workflows/app-ci.yml"

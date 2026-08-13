@@ -25,7 +25,7 @@ describe("catalog listing", () => {
     const templateNames = entries.filter((entry) => entry.kind === "template").map((entry) => entry.name);
 
     expect(routeNames).toEqual(["refine", "implement", "direct", "apply-review", "merge-gate", "audit", "propose"]);
-    expect(templateNames).toEqual(["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo", "opencode.ci.json"]);
+    expect(templateNames).toEqual(["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo", "github-release", "opencode.ci.json"]);
   });
 
   it("reports all entries as not installed in an empty repository", async () => {

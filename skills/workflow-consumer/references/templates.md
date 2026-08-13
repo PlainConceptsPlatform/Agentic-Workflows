@@ -9,6 +9,7 @@ installed as a mandatory file during catalog install; it is not optional.
 | `agentics-maintenance` | Repository wants gh-aw maintenance workflow before first compilation |
 | `app-ci-dotnet-next` | .NET, SQL Server integration testing, and Next.js match repository |
 | `app-ci-node-monorepo` | Node monorepo with supported web, desktop, mobile, and E2E layout matches repository |
+| `github-release` | Pushing a `v*` tag should publish a GitHub Release with generated notes |
 | `opencode.ci.json` | Always installed as mandatory during catalog install. Advanced: use `--template opencode.ci.json` to install in isolation |
 
 ## Install one
@@ -69,6 +70,12 @@ A full CI pipeline for a Node monorepo with web, desktop, mobile, and E2E testin
 
 Read the template's `env:` block and job commands before enabling it. Tailor workspace paths, package
 scripts, and test commands to the repository.
+
+### `github-release`
+
+Publishes a GitHub Release when a tag matching `v*` is pushed. GitHub generates the notes by comparing
+the new tag with the preceding release. Re-running the workflow updates the existing release rather
+than failing. Change the tag pattern if the repository uses a different version convention.
 
 ### `opencode.ci.json`
 
