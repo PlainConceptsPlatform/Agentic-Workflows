@@ -155,6 +155,15 @@ describe("generateOpencodeCi", () => {
     expect(result).not.toContain("\n    - name: Restore .NET dependencies\n");
   });
 
+  it("uses POSIX separators for .NET restore commands", () => {
+    const result = generateOpencodeCi(OPENCODE_CI_MD, makeInspection({
+      solutionFiles: ["apps\\api\\Numa.slnx"],
+    }));
+
+    expect(result).toContain("dotnet restore apps/api/Numa.slnx");
+    expect(result).not.toContain("dotnet restore apps\\api\\Numa.slnx");
+  });
+
   it("adds the pinned OpenSpec CLI install step when openspec/ directory exists", () => {
     const result = generateOpencodeCi(OPENCODE_CI_MD, makeInspection({
       openSpec: true,

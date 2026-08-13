@@ -37,7 +37,8 @@ for (const file of readdirSync(workflowDirectory)) {
   const patched = content
     .replaceAll("opencode run --print-logs --log-level DEBUG", "opencode run --log-level ERROR")
     .replaceAll("opencode run --print-logs --log-level ERROR", "opencode run --log-level ERROR")
-    .replaceAll("--log-level DEBUG", "--log-level ERROR");
+    .replaceAll("--log-level DEBUG", "--log-level ERROR")
+    .replace(/GH_AW_INFO_MODEL_COSTS: '[^']*'/g, "GH_AW_INFO_MODEL_COSTS: '{\"providers\":{}}'");
 
   if (patched !== content) writeFileSync(path, patched);
 }
