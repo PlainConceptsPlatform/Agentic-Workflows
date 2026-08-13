@@ -36,7 +36,10 @@ for (const file of readdirSync(workflowDirectory)) {
 
   const path = join(workflowDirectory, file);
   const content = readFileSync(path, "utf8");
-  const patched = content.replaceAll("--log-level DEBUG", "--log-level ERROR");
+  const patched = content
+    .replaceAll("opencode run --print-logs --log-level DEBUG", "opencode run --log-level ERROR")
+    .replaceAll("opencode run --print-logs --log-level ERROR", "opencode run --log-level ERROR")
+    .replaceAll("--log-level DEBUG", "--log-level ERROR");
 
   if (patched !== content) writeFileSync(path, patched);
 }
