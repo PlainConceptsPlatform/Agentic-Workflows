@@ -79,6 +79,8 @@ export async function installCatalog(
     processedContents = transformOpencodeFiles(processedContents, options.inspection);
   }
 
+  processedContents = await preserveConsumerWorkerEnv(repositoryPath, processedContents);
+
   const updates = [...processedContents.entries()]
     .filter(([target]) => filtered.find((file) => file.target === target)?.managed ?? true)
     .map(([target, content]) => ({ target, content }));
@@ -99,6 +101,38 @@ function injectStackIntoWorkers(files: Map<string, string>, defaults: StackDefau
     }
   }
   return result;
+}
+
+async function preserveConsumerWorkerEnv(repositoryPath: string, files: Map<string, string>): Promise<Map<string, string>> {
+  const result = new Map(files);
+  for (const [target, content] of result) {
+    if (!target.startsWith(".github/workflows/agent-") || !target.endsWith(".md")) continue;
+    const existingPath = join(repositoryPath, target);
+    if (!await exists(existingPath)) continue;
+    result.set(target, mergeWorkerEnv(content, await readFile(existingPath, "utf8")));
+  }
+  return result;
+}
+
+function mergeWorkerEnv(packageContent: string, consumerContent: string): string {
+  const consumerEnv = workerEnvValues(consumerContent);
+  if (consumerEnv.size === 0) return packageContent;
+
+  return packageContent.replace(/^  ([A-Z][A-Z0-9_]*): .+$/gm, (line, key: string) =>
+    consumerEnv.has(key) ? `  ${key}: ${consumerEnv.get(key)}` : line);
+}
+
+function workerEnvValues(content: string): Map<string, string> {
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/m.exec(content)?.[1];
+  const envBlock = frontmatter === undefined ? undefined : /^env:\r?\n((?:  .*\r?\n?)*)/m.exec(frontmatter)?.[1];
+  const values = new Map<string, string>();
+  if (envBlock === undefined) return values;
+
+  for (const line of envBlock.split(/\r?\n/)) {
+    const match = /^  ([A-Z][A-Z0-9_]*): (.+)$/.exec(line);
+    if (match !== null) values.set(match[1]!, match[2]!);
+  }
+  return values;
 }
 
 function transformOpencodeFiles(files: Map<string, string>, inspection: RepositoryInspection): Map<string, string> {

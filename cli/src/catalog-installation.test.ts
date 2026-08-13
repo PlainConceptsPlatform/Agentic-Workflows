@@ -331,6 +331,24 @@ describe("catalog installation", () => {
     await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8")).rejects.toThrow();
   });
 
+  it("preserves consumer-specific worker environment values during a forced update", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "name: Check\n",
+      "workflows/agent-check.md": "---\nenv:\n  VERIFY_COMMANDS: \"package verify\"\n  REPO_RULES: \"package rules\"\n  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1\n---\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{}\n",
+    });
+    const repositoryPath = await createDirectory({
+      ".github/workflows/agent-check.md": "---\nenv:\n  VERIFY_COMMANDS: \"consumer verify\"\n  REPO_RULES: \"consumer rules\"\n  OPENAI_BASE_URL: https://consumer.example/v1\n---\n",
+    });
+
+    await installCatalog(repositoryPath, { force: true, sourcePath });
+
+    await expect(readFile(join(repositoryPath, ".github/workflows/agent-check.md"), "utf8")).resolves.toContain(
+      "  REPO_RULES: \"consumer rules\"\n  OPENAI_BASE_URL: https://consumer.example/v1\n",
+    );
+  });
+
   it("applies staged generated locks with managed sources", async () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "package action\n",
