@@ -153,23 +153,23 @@ describe("generateOpencodeCi", () => {
     expect(result).toContain("dotnet restore apps/api/Numa.slnx");
   });
 
-  it("does not add an OpenSpec CLI install step when openspec/ directory exists", () => {
+  it("adds the pinned OpenSpec CLI install step when openspec/ directory exists", () => {
     const result = generateOpencodeCi(OPENCODE_CI_MD, makeInspection({
       openSpec: true,
     }));
 
-    expect(result).not.toContain("Install OpenSpec CLI");
-    expect(result).not.toContain("@openspec/cli");
+    expect(result).toContain("Install OpenSpec CLI");
+    expect(result).toContain("@fission-ai/openspec@1.8.0");
   });
 
-  it("adds NuGet steps without adding an OpenSpec CLI install step", () => {
+  it("adds both NuGet and OpenSpec steps when both are detected", () => {
     const result = generateOpencodeCi(OPENCODE_CI_MD, makeInspection({
       solutionFiles: ["app.slnx"],
       openSpec: true,
     }));
 
     expect(result).toContain("Cache NuGet packages");
-    expect(result).not.toContain("Install OpenSpec CLI");
+    expect(result).toContain("Install OpenSpec CLI");
   });
 
   it("does not add NuGet steps when no .slnx is present", () => {

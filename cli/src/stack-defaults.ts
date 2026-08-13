@@ -69,6 +69,17 @@ export function generateOpencodeCi(
     result = insertBeforeMarker(result, nugetSteps, "  - name: Install workspace dependencies");
   }
 
+  if (inspection.stackHints.openSpec) {
+    const openspecStep = `  - name: Install OpenSpec CLI
+    run: |
+      set -euo pipefail
+      npm install -g "@fission-ai/openspec@1.8.0"
+      openspec --version
+`;
+
+    result = insertBeforeMarker(result, openspecStep, "  - name: Install workspace dependencies");
+  }
+
   if (inspection.stackHints.packageJson && !result.includes("--legacy-peer-deps")) {
     result = result.replace(
       `      if ! npm install --prefix .opencode; then\n        echo "No plugin deps, skipping."\n        exit 0\n      fi`,
