@@ -334,18 +334,18 @@ describe("catalog installation", () => {
   it("preserves consumer-specific worker environment values during a forced update", async () => {
     const sourcePath = await createDirectory({
       "actions/check/action.yml": "name: Check\n",
-      "workflows/agent-check.md": "---\nenv:\n  VERIFY_COMMANDS: \"package verify\"\n  REPO_RULES: \"package rules\"\n  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1\n---\n",
+      "workflows/agent-check.md": "---\nenv:\n  VERIFY_COMMANDS: \"package verify\"\n  REPO_RULES: \"package rules\"\n---\nengine:\n  env:\n    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1\n",
       "scripts/compile-agent-workflows.mjs": "compile\n",
       "templates/opencode/opencode.ci.json": "{}\n",
     });
     const repositoryPath = await createDirectory({
-      ".github/workflows/agent-check.md": "---\nenv:\n  VERIFY_COMMANDS: \"consumer verify\"\n  REPO_RULES: \"consumer rules\"\n  OPENAI_BASE_URL: https://consumer.example/v1\n---\n",
+      ".github/workflows/agent-check.md": "---\nenv:\n  VERIFY_COMMANDS: \"consumer verify\"\n  REPO_RULES: \"consumer rules\"\n---\nengine:\n  env:\n    OPENAI_BASE_URL: https://consumer.example/v1\n",
     });
 
     await installCatalog(repositoryPath, { force: true, sourcePath });
 
     await expect(readFile(join(repositoryPath, ".github/workflows/agent-check.md"), "utf8")).resolves.toContain(
-      "  REPO_RULES: \"consumer rules\"\n  OPENAI_BASE_URL: https://consumer.example/v1\n",
+      "  REPO_RULES: \"consumer rules\"\n---\nengine:\n  env:\n    OPENAI_BASE_URL: https://consumer.example/v1\n",
     );
   });
 

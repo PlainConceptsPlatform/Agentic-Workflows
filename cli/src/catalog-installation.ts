@@ -116,10 +116,13 @@ async function preserveConsumerWorkerEnv(repositoryPath: string, files: Map<stri
 
 function mergeWorkerEnv(packageContent: string, consumerContent: string): string {
   const consumerEnv = workerEnvValues(consumerContent);
-  if (consumerEnv.size === 0) return packageContent;
-
-  return packageContent.replace(/^  ([A-Z][A-Z0-9_]*): .+$/gm, (line, key: string) =>
+  let result = packageContent.replace(/^  ([A-Z][A-Z0-9_]*): .+$/gm, (line, key: string) =>
     consumerEnv.has(key) ? `  ${key}: ${consumerEnv.get(key)}` : line);
+  const endpoint = engineEndpoint(consumerContent);
+  if (endpoint !== undefined) {
+    result = result.replace(/^    OPENAI_BASE_URL: .+$/m, `    OPENAI_BASE_URL: ${endpoint}`);
+  }
+  return result;
 }
 
 function workerEnvValues(content: string): Map<string, string> {
@@ -133,6 +136,10 @@ function workerEnvValues(content: string): Map<string, string> {
     if (match !== null) values.set(match[1]!, match[2]!);
   }
   return values;
+}
+
+function engineEndpoint(content: string): string | undefined {
+  return /^    OPENAI_BASE_URL: (.+)$/m.exec(content)?.[1];
 }
 
 function transformOpencodeFiles(files: Map<string, string>, inspection: RepositoryInspection): Map<string, string> {
