@@ -316,7 +316,8 @@ jobs:
     needs: classify
     if: >
       needs.classify.outputs.route == 'bot-approve' &&
-        (github.actor == 'app/github-actions' || github.actor == 'platform-devbox[bot]')
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.actor == 'github-actions[bot]' || github.actor == 'platform-devbox[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

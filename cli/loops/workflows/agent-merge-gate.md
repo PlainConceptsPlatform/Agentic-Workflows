@@ -116,7 +116,7 @@ jobs:
 
   review_required:
     needs: [subject, protected_changes]
-    if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review == 'true'
+    if: needs.subject.outputs.found == 'true' && needs.subject.outputs.conclusion != 'failure' && needs.protected_changes.outputs.requires_review == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -275,9 +275,9 @@ jobs:
 
   agent:
     needs: protected_changes
-    if: needs.protected_changes.outputs.requires_review != 'true'
+    if: needs.subject.outputs.conclusion == 'failure' || needs.protected_changes.outputs.requires_review != 'true'
 
-if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review != 'true'
+if: needs.subject.outputs.found == 'true' && (needs.subject.outputs.conclusion == 'failure' || needs.protected_changes.outputs.requires_review != 'true')
 
 runs-on: ubuntu-latest
 runs-on-slim: ubuntu-latest
@@ -363,7 +363,13 @@ timeout-minutes: 60
 
 3. Branch on the conclusion.
 
-   - **success** → step 4.
+    - Before either `success` or `failure` handling, check whether the pull request can merge
+      cleanly with `main`. If it cannot, rebase the checked-out pull request branch onto
+      `origin/main`, resolve conflicts without discarding either side's intended changes, run
+      the verification commands in step 7, and call `push_to_pull_request_branch`. Do not
+      merge in this run. The push starts CI again, which will call this gate with fresh facts.
+      If conflicts cannot be resolved safely, add the `review` label and explain the conflict.
+    - **success** with no conflict → step 4.
    - **action_required** → CI did not run because the workflow needs approval.
      Call `remove_labels` to remove `bot-working` (item_number:
      ${{ needs.subject.outputs.issue }}), then `add_labels` to add `review`
