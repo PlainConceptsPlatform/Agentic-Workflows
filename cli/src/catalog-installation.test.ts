@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -342,6 +343,7 @@ describe("catalog installation", () => {
     await installCatalog(repositoryPath, {
       sourcePath,
       compile: async (stagingPath) => {
+        await expect(access(join(stagingPath, ".git"), constants.F_OK)).resolves.toBeUndefined();
         await writeFile(join(stagingPath, ".github", "workflows", "agent-check.lock.yml"), "opencode run --log-level ERROR\n", "utf8");
       },
     });

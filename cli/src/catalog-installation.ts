@@ -222,6 +222,7 @@ async function validateStagedCatalog(
   try {
     await copyCompilationInputs(repositoryPath, stagingPath);
     await writeUpdates(stagingPath, updates);
+    await initializeStagingRepository(stagingPath);
 
     const compiler = compileOverride ?? await packageCompiler(stagingPath);
     if (compiler === undefined) return [];
@@ -235,6 +236,10 @@ async function validateStagedCatalog(
 async function copyCompilationInputs(repositoryPath: string, stagingPath: string): Promise<void> {
   const githubPath = join(repositoryPath, ".github");
   if (await exists(githubPath)) await cp(githubPath, join(stagingPath, ".github"), { recursive: true });
+}
+
+async function initializeStagingRepository(stagingPath: string): Promise<void> {
+  await execFileAsync("git", ["init", "--quiet"], { cwd: stagingPath, windowsHide: true });
 }
 
 async function packageCompiler(repositoryPath: string): Promise<((path: string) => Promise<void>) | undefined> {
