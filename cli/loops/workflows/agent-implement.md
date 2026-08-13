@@ -105,8 +105,7 @@ jobs:
     needs: [agent, safe_outputs]
     if: >
       needs.agent.result == 'success' &&
-      needs.safe_outputs.result == 'success' &&
-      needs.safe_outputs.outputs.created_pr_number != ''
+      needs.safe_outputs.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -142,11 +141,7 @@ jobs:
     if: >
       always() &&
       needs.eligibility.outputs.eligible == 'true' &&
-      (
-        needs.agent.result != 'success' ||
-        needs.safe_outputs.result != 'success' ||
-        needs.safe_outputs.outputs.created_pr_number == ''
-      )
+      needs.agent.result != 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
