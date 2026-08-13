@@ -151,6 +151,8 @@ describe("generateOpencodeCi", () => {
     expect(result).toContain("Cache NuGet packages");
     expect(result).toContain("Restore .NET dependencies");
     expect(result).toContain("dotnet restore apps/api/Numa.slnx");
+    expect(result).toContain("\n  - name: Restore .NET dependencies\n");
+    expect(result).not.toContain("\n    - name: Restore .NET dependencies\n");
   });
 
   it("adds the pinned OpenSpec CLI install step when openspec/ directory exists", () => {

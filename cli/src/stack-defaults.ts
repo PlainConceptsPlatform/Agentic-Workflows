@@ -62,7 +62,7 @@ export function generateOpencodeCi(
       key: nuget-\${{ runner.os }}-\${{ hashFiles('**/*.slnx', '**/Directory.Packages.props') }}
       restore-keys: nuget-\${{ runner.os }}-
 
-   - name: Restore .NET dependencies
+  - name: Restore .NET dependencies
     run: dotnet restore ${solutionPath}
 `;
 
