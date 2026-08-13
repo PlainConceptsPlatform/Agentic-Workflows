@@ -303,6 +303,53 @@ describe("catalog installation", () => {
       .resolves.toBe("pnpm lint\nnode scripts/compile-agent-workflows.mjs\n");
   });
 
+  it("leaves consumer files untouched when staged workflow compilation fails", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "package action\n",
+      "workflows/agent-check.md": "package workflow\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"package\" }\n",
+    });
+    const repositoryPath = await createDirectory({
+      ".github/actions/check/action.yml": "consumer action\n",
+      ".github/workflows/agent-check.md": "consumer workflow\n",
+      "opencode.ci.json": "{ \"model\": \"consumer\" }\n",
+      "scripts/compile-agent-workflows.mjs": "consumer compiler\n",
+    });
+
+    await expect(installCatalog(repositoryPath, {
+      force: true,
+      sourcePath,
+      compile: async () => { throw new Error("compile failed"); },
+    })).rejects.toThrow("compile failed");
+
+    await expect(readFile(join(repositoryPath, ".github/workflows/agent-check.md"), "utf8"))
+      .resolves.toBe("consumer workflow\n");
+    await expect(readFile(join(repositoryPath, "scripts/compile-agent-workflows.mjs"), "utf8"))
+      .resolves.toBe("consumer compiler\n");
+    await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8")).rejects.toThrow();
+  });
+
+  it("applies staged generated locks with managed sources", async () => {
+    const sourcePath = await createDirectory({
+      "actions/check/action.yml": "package action\n",
+      "workflows/agent-check.md": "package workflow\n",
+      "scripts/compile-agent-workflows.mjs": "compile\n",
+      "templates/opencode/opencode.ci.json": "{ \"model\": \"package\" }\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    await installCatalog(repositoryPath, {
+      sourcePath,
+      compile: async (stagingPath) => {
+        await writeFile(join(stagingPath, ".github", "workflows", "agent-check.lock.yml"), "opencode run --log-level ERROR\n", "utf8");
+      },
+    });
+
+    await expect(readFile(join(repositoryPath, ".github", "workflows", "agent-check.lock.yml"), "utf8"))
+      .resolves.toBe("opencode run --log-level ERROR\n");
+  });
+
   it("installs the opencode.ci.json template to the repository root", async () => {
     const sourcePath = await createDirectory({
       "templates/opencode/opencode.ci.json": "{ \"model\": \"plainconcepts/glm-5-2\" }\n",

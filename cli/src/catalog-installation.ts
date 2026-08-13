@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { access, copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, copyFile, cp, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +22,7 @@ export interface CatalogInstallOptions {
   readonly sourcePath?: string;
   readonly selectedRoutes?: readonly RouteName[];
   readonly inspection?: RepositoryInspection;
+  readonly compile?: (repositoryPath: string) => Promise<void>;
 }
 
 interface CatalogFile {
@@ -65,14 +66,6 @@ export async function installCatalog(
     return !excluded.has(fileName);
   });
 
-  const managedFiles = filtered.filter((file) => file.managed);
-  const conflicts = (await Promise.all(managedFiles.map(async (file) => {
-    const destination = join(repositoryPath, file.target);
-    return await exists(destination) && !(await filesMatch(file.source, destination)) ? file.target : undefined;
-  }))).filter((file): file is string => file !== undefined);
-
-  if (conflicts.length > 0 && !options.force) return { installed: [], conflicts };
-
   const fileContents = new Map<string, string>();
   for (const file of filtered) {
     fileContents.set(file.target, await readFile(file.source, "utf8"));
@@ -86,21 +79,14 @@ export async function installCatalog(
     processedContents = transformOpencodeFiles(processedContents, options.inspection);
   }
 
-  await Promise.all([...processedContents.entries()].map(async ([target, content]) => {
-    const destination = join(repositoryPath, target);
-    const originalFile = filtered.find((f) => f.target === target);
-    if (originalFile !== undefined && !originalFile.managed && await exists(destination)) return;
-    await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, content, "utf8");
-  }));
+  const updates = [...processedContents.entries()]
+    .filter(([target]) => filtered.find((file) => file.target === target)?.managed ?? true)
+    .map(([target, content]) => ({ target, content }));
+  const conflicts = await conflictingTargets(repositoryPath, updates);
+  if (conflicts.length > 0 && !options.force) return { installed: [], conflicts };
 
-  await ensurePreCommitHook(repositoryPath);
-
-  try {
-    await runCompileIfAvailable(repositoryPath);
-  } catch {
-    // compile failure is non-fatal
-  }
+  const stagedLocks = await validateStagedCatalog(repositoryPath, updates, options.compile);
+  await applyTransaction(repositoryPath, [...updates, ...stagedLocks, await preCommitHookUpdate(repositoryPath)]);
 
   return { installed: [...processedContents.keys()].sort(), conflicts };
 }
@@ -172,11 +158,8 @@ export async function installMandatoryFiles(
 
   if (conflicts.length > 0 && !options.force) return { installed: [], conflicts };
 
-  await Promise.all(files.map(async (file) => {
-    const destination = join(repositoryPath, file.target);
-    await mkdir(dirname(destination), { recursive: true });
-    await copyFile(file.source, destination);
-  }));
+  const updates = await Promise.all(files.map(async (file) => ({ target: file.target, content: await readFile(file.source, "utf8") })));
+  await applyTransaction(repositoryPath, [...updates, await preCommitHookUpdate(repositoryPath)]);
 
   return { installed: files.map((file) => file.target), conflicts };
 }
@@ -186,21 +169,24 @@ export function isTemplateName(value: string): value is TemplateName {
 }
 
 export async function ensurePreCommitHook(repositoryPath: string): Promise<void> {
-  const hookPath = join(repositoryPath, ".husky", "pre-commit");
+  const update = await preCommitHookUpdate(repositoryPath);
+  await applyTransaction(repositoryPath, [update]);
+}
+
+async function preCommitHookUpdate(repositoryPath: string): Promise<{ target: string; content: string }> {
+  const target = ".husky/pre-commit";
+  const hookPath = join(repositoryPath, target);
   const compileLine = "node scripts/compile-agent-workflows.mjs";
   if (!await exists(hookPath)) {
-    await mkdir(dirname(hookPath), { recursive: true });
-    await writeFile(hookPath, `${compileLine}\n`, "utf8");
-    return;
+    return { target, content: `${compileLine}\n` };
   }
 
   const content = await readFile(hookPath, "utf8");
-  if (content.includes("compile-agent-workflows")) return;
+  if (content.includes("compile-agent-workflows")) return { target, content };
 
-  const newContent = content.endsWith("\n") || content === ""
+  return { target, content: content.endsWith("\n") || content === ""
     ? `${content}${compileLine}\n`
-    : `${content}\n${compileLine}\n`;
-  await writeFile(hookPath, newContent, "utf8");
+    : `${content}\n${compileLine}\n` };
 }
 
 export async function runCompileIfAvailable(repositoryPath: string): Promise<void> {
@@ -208,6 +194,102 @@ export async function runCompileIfAvailable(repositoryPath: string): Promise<voi
   if (await exists(script)) {
     await execFileAsync("node", [script, "--force"], { cwd: repositoryPath });
   }
+}
+
+interface ContentUpdate {
+  readonly target: string;
+  readonly content: string;
+}
+
+async function conflictingTargets(repositoryPath: string, updates: readonly ContentUpdate[]): Promise<string[]> {
+  const conflicts = (await Promise.all(updates.map(async ({ target, content }) => {
+    const destination = join(repositoryPath, target);
+    if (!await exists(destination)) return undefined;
+    return (await readFile(destination, "utf8")) === content ? undefined : target;
+  }))).filter((target): target is string => target !== undefined);
+  return [...new Set(conflicts)].sort();
+}
+
+async function validateStagedCatalog(
+  repositoryPath: string,
+  updates: readonly ContentUpdate[],
+  compileOverride: CatalogInstallOptions["compile"],
+): Promise<ContentUpdate[]> {
+  const temporaryRoot = join(repositoryPath, ".opencode", ".tmp");
+  await mkdir(temporaryRoot, { recursive: true });
+  const stagingPath = await mkdtemp(join(temporaryRoot, "workflows-"));
+
+  try {
+    await copyCompilationInputs(repositoryPath, stagingPath);
+    await writeUpdates(stagingPath, updates);
+
+    const compiler = compileOverride ?? await packageCompiler(stagingPath);
+    if (compiler === undefined) return [];
+    await compiler(stagingPath);
+    return await generatedFiles(stagingPath);
+  } finally {
+    await rm(stagingPath, { force: true, recursive: true });
+  }
+}
+
+async function copyCompilationInputs(repositoryPath: string, stagingPath: string): Promise<void> {
+  const githubPath = join(repositoryPath, ".github");
+  if (await exists(githubPath)) await cp(githubPath, join(stagingPath, ".github"), { recursive: true });
+}
+
+async function packageCompiler(repositoryPath: string): Promise<((path: string) => Promise<void>) | undefined> {
+  const scriptPath = join(repositoryPath, "scripts", "compile-agent-workflows.mjs");
+  if (!await exists(scriptPath)) return undefined;
+  const content = await readFile(scriptPath, "utf8");
+  return content.includes("gh aw compile") ? runCompileIfAvailable : undefined;
+}
+
+async function generatedFiles(repositoryPath: string): Promise<ContentUpdate[]> {
+  const workflowPath = join(repositoryPath, ".github", "workflows");
+  const updates: ContentUpdate[] = [];
+
+  if (await exists(workflowPath)) {
+    for (const file of await filesIn(workflowPath)) {
+      if (!file.endsWith(".lock.yml")) continue;
+      updates.push({ target: `.github/workflows/${file.replaceAll("\\", "/")}`, content: await readFile(join(workflowPath, file), "utf8") });
+    }
+  }
+
+  const actionsLock = join(repositoryPath, ".github", "actions", "actions-lock.json");
+  if (await exists(actionsLock)) {
+    updates.push({ target: ".github/actions/actions-lock.json", content: await readFile(actionsLock, "utf8") });
+  }
+
+  return updates.sort((left, right) => left.target.localeCompare(right.target));
+}
+
+async function applyTransaction(repositoryPath: string, updates: readonly ContentUpdate[]): Promise<void> {
+  const uniqueUpdates = [...new Map(updates.map((update) => [update.target, update])).values()];
+  const rollback = await Promise.all(uniqueUpdates.map(async ({ target }) => {
+    const path = join(repositoryPath, target);
+    return { target, existed: await exists(path), content: await exists(path) ? await readFile(path, "utf8") : undefined };
+  }));
+
+  try {
+    await writeUpdates(repositoryPath, uniqueUpdates);
+  } catch (error) {
+    await Promise.all(rollback.map(async ({ target, existed, content }) => {
+      if (existed && content !== undefined) {
+        await writeUpdates(repositoryPath, [{ target, content }]);
+      } else {
+        await rm(join(repositoryPath, target), { force: true });
+      }
+    }));
+    throw error;
+  }
+}
+
+async function writeUpdates(repositoryPath: string, updates: readonly ContentUpdate[]): Promise<void> {
+  await Promise.all(updates.map(async ({ target, content }) => {
+    const destination = join(repositoryPath, target);
+    await mkdir(dirname(destination), { recursive: true });
+    await writeFile(destination, content, "utf8");
+  }));
 }
 
 function catalogTemplateMeta(template: TemplateName): { directory: string; file: string; target: string } {
