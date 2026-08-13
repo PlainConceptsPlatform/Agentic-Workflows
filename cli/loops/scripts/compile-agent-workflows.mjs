@@ -27,9 +27,7 @@ if (compile.error?.code === "ENOENT" || compile.status === null) {
   process.exit(1);
 }
 
-if (compile.status !== 0) {
-  process.exit(compile.status ?? 1);
-}
+if (compile.status !== 0) process.exit(compile.status ?? 1);
 
 for (const file of readdirSync(workflowDirectory)) {
   if (!file.endsWith(".lock.yml")) continue;

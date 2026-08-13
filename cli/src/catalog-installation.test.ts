@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { catalogSourcePath, installCatalog, installMandatoryFiles, installTemplate } from "./catalog-installation.js";
+import { catalogSourcePath, ensurePreCommitHook, installCatalog, installMandatoryFiles, installTemplate } from "./catalog-installation.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -277,6 +277,25 @@ describe("catalog installation", () => {
     const result = await installCatalog(repositoryPath, { sourcePath });
     const compileEntries = result.installed.filter((path) => path === "scripts/compile-agent-workflows.mjs");
     expect(compileEntries).toHaveLength(1);
+  });
+
+  it("creates a Husky pre-commit hook when the consumer has none", async () => {
+    const repositoryPath = await createDirectory({});
+
+    await ensurePreCommitHook(repositoryPath);
+
+    await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8"))
+      .resolves.toBe("node scripts/compile-agent-workflows.mjs\n");
+  });
+
+  it("keeps existing pre-commit commands and appends the compiler once", async () => {
+    const repositoryPath = await createDirectory({ ".husky/pre-commit": "pnpm lint\n" });
+
+    await ensurePreCommitHook(repositoryPath);
+    await ensurePreCommitHook(repositoryPath);
+
+    await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8"))
+      .resolves.toBe("pnpm lint\nnode scripts/compile-agent-workflows.mjs\n");
   });
 
   it("installs the opencode.ci.json template to the repository root", async () => {

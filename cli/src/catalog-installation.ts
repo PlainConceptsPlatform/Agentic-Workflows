@@ -187,10 +187,14 @@ export function isTemplateName(value: string): value is TemplateName {
 
 export async function ensurePreCommitHook(repositoryPath: string): Promise<void> {
   const hookPath = join(repositoryPath, ".husky", "pre-commit");
-  if (!await exists(hookPath)) return;
+  const compileLine = "node scripts/compile-agent-workflows.mjs";
+  if (!await exists(hookPath)) {
+    await mkdir(dirname(hookPath), { recursive: true });
+    await writeFile(hookPath, `${compileLine}\n`, "utf8");
+    return;
+  }
 
   const content = await readFile(hookPath, "utf8");
-  const compileLine = "node scripts/compile-agent-workflows.mjs";
   if (content.includes("compile-agent-workflows")) return;
 
   const newContent = content.endsWith("\n") || content === ""

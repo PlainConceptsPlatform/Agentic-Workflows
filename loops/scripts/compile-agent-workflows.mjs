@@ -1,6 +1,7 @@
 // Managed by @plainconceptsplatform/workflows. Source: loops/scripts/compile-agent-workflows.mjs. Update with `workflows update --force`; consumer edits may be overwritten.
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const workflowDirectory = existsSync("loops/workflows") ? "loops/workflows" : ".github/workflows";
 
@@ -26,4 +27,17 @@ if (compile.error?.code === "ENOENT" || compile.status === null) {
   process.exit(1);
 }
 
-process.exit(compile.status ?? 1);
+if (compile.status !== 0) process.exit(compile.status ?? 1);
+
+for (const file of readdirSync(workflowDirectory)) {
+  if (!file.endsWith(".lock.yml")) continue;
+
+  const path = join(workflowDirectory, file);
+  const content = readFileSync(path, "utf8");
+  const patched = content
+    .replaceAll("opencode run --print-logs --log-level DEBUG", "opencode run --log-level ERROR")
+    .replaceAll("opencode run --print-logs --log-level ERROR", "opencode run --log-level ERROR")
+    .replaceAll("--log-level DEBUG", "--log-level ERROR");
+
+  if (patched !== content) writeFileSync(path, patched);
+}
