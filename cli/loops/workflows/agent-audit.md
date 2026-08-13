@@ -24,6 +24,7 @@ name: "Agent: Audit"
 # Shared: network policy only. This workflow owns its Safe Outputs and OpenCode configuration.
 # permissions, engine, model and runs-on cannot be shared , see shared/platform-defaults.md.
 imports:
+  - github/gh-aw/.github/workflows/shared/opencode.md@v0.86.2
   - shared/platform-defaults.md
   - shared/opencode-ci.md
 

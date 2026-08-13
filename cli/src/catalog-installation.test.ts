@@ -291,7 +291,7 @@ describe("catalog installation", () => {
     await ensurePreCommitHook(repositoryPath);
 
     await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8"))
-      .resolves.toBe("node scripts/compile-agent-workflows.mjs\ngit add -- .github/workflows/*.lock.yml\n[ ! -f .github/actions/actions-lock.json ] || git add -- .github/actions/actions-lock.json\n");
+      .resolves.toBe("if git diff --cached --name-only -- .github | grep -q .; then\n  node scripts/compile-agent-workflows.mjs\n  git add -- .github/workflows/*.lock.yml\n  [ ! -f .github/actions/actions-lock.json ] || git add -- .github/actions/actions-lock.json\nfi\n");
   });
 
   it("keeps existing pre-commit commands and appends the compiler once", async () => {
@@ -301,7 +301,7 @@ describe("catalog installation", () => {
     await ensurePreCommitHook(repositoryPath);
 
     await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8"))
-      .resolves.toBe("pnpm lint\nnode scripts/compile-agent-workflows.mjs\ngit add -- .github/workflows/*.lock.yml\n[ ! -f .github/actions/actions-lock.json ] || git add -- .github/actions/actions-lock.json\n");
+      .resolves.toBe("pnpm lint\nif git diff --cached --name-only -- .github | grep -q .; then\n  node scripts/compile-agent-workflows.mjs\n  git add -- .github/workflows/*.lock.yml\n  [ ! -f .github/actions/actions-lock.json ] || git add -- .github/actions/actions-lock.json\nfi\n");
   });
 
   it("upgrades an existing compiler hook to stage generated locks", async () => {
@@ -310,7 +310,7 @@ describe("catalog installation", () => {
     await ensurePreCommitHook(repositoryPath);
 
     await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8"))
-      .resolves.toContain("git add -- .github/workflows/*.lock.yml");
+      .resolves.toContain("if git diff --cached --name-only -- .github | grep -q .; then");
   });
 
   it("leaves consumer files untouched when staged workflow compilation fails", async () => {

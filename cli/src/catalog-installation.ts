@@ -220,16 +220,18 @@ async function preCommitHookUpdate(repositoryPath: string): Promise<{ target: st
   const compileLine = "node scripts/compile-agent-workflows.mjs";
   const stageLine = "git add -- .github/workflows/*.lock.yml";
   const actionLockLine = "[ ! -f .github/actions/actions-lock.json ] || git add -- .github/actions/actions-lock.json";
-  const managedLines = `${compileLine}\n${stageLine}\n${actionLockLine}\n`;
+  const managedLines = `if git diff --cached --name-only -- .github | grep -q .; then\n  ${compileLine}\n  ${stageLine}\n  ${actionLockLine}\nfi\n`;
   if (!await exists(hookPath)) {
     return { target, content: managedLines };
   }
 
   const content = await readFile(hookPath, "utf8");
   if (content.includes("compile-agent-workflows")) {
-    if (content.includes(stageLine)) return { target, content };
+    const legacyLines = `${compileLine}\n${stageLine}\n${actionLockLine}\n`;
+    if (content.includes(managedLines)) return { target, content };
+    if (content.includes(legacyLines)) return { target, content: content.replace(legacyLines, managedLines) };
     const suffix = content.endsWith("\n") || content === "" ? "" : "\n";
-    return { target, content: `${content}${suffix}${stageLine}\n${actionLockLine}\n` };
+    return { target, content: `${content}${suffix}${managedLines}` };
   }
 
   return { target, content: content.endsWith("\n") || content === ""

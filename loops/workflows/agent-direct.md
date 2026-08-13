@@ -25,6 +25,7 @@ description: |
 name: "Agent: Direct"
 
 imports:
+  - github/gh-aw/.github/workflows/shared/opencode.md@v0.86.2
   - shared/platform-defaults.md
   - shared/opencode-ci.md
 
