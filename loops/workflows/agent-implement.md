@@ -2,7 +2,6 @@
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-implement.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
   REPO_RULES: "Implement only the selected issue. Follow repository documentation and existing conventions. Do not weaken tests, lower coverage thresholds, or bypass checks. Run the project's full verification suite before creating a pull request."
-  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   IMPLEMENT_LABEL: implement
   WORKING_LABEL: bot-working
   REVIEW_LABEL: review

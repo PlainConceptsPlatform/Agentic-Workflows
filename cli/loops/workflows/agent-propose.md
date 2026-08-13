@@ -2,7 +2,6 @@
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-propose.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
   REPO_RULES: "Propose one focused product candidate from repository evidence and curated feature radar. Respect documented product goals and architecture boundaries. Do not propose features that conflict with the project's stated scope."
-  OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
   PROPOSED_LABEL: proposed
   IMPLEMENT_LABEL: implement
   PROPOSE_MARKER: "<!-- agent-propose -->"
