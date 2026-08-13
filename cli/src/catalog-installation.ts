@@ -218,16 +218,23 @@ async function preCommitHookUpdate(repositoryPath: string): Promise<{ target: st
   const target = ".husky/pre-commit";
   const hookPath = join(repositoryPath, target);
   const compileLine = "node scripts/compile-agent-workflows.mjs";
+  const stageLine = "git add -- .github/workflows/*.lock.yml";
+  const actionLockLine = "[ ! -f .github/actions/actions-lock.json ] || git add -- .github/actions/actions-lock.json";
+  const managedLines = `${compileLine}\n${stageLine}\n${actionLockLine}\n`;
   if (!await exists(hookPath)) {
-    return { target, content: `${compileLine}\n` };
+    return { target, content: managedLines };
   }
 
   const content = await readFile(hookPath, "utf8");
-  if (content.includes("compile-agent-workflows")) return { target, content };
+  if (content.includes("compile-agent-workflows")) {
+    if (content.includes(stageLine)) return { target, content };
+    const suffix = content.endsWith("\n") || content === "" ? "" : "\n";
+    return { target, content: `${content}${suffix}${stageLine}\n${actionLockLine}\n` };
+  }
 
   return { target, content: content.endsWith("\n") || content === ""
-    ? `${content}${compileLine}\n`
-    : `${content}\n${compileLine}\n` };
+    ? `${content}${managedLines}`
+    : `${content}\n${managedLines}` };
 }
 
 export async function runCompileIfAvailable(repositoryPath: string): Promise<void> {
