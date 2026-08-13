@@ -39,7 +39,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
   workflow_run:
-    workflows: ["App: CI"]
+    workflows: ["App: CI", "CI"]
     types: [completed]
     branches:
       - "fix/*"

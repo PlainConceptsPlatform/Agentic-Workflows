@@ -8,6 +8,8 @@ network:
     - forge.plainconcepts.com
     - node
     - github
+    - dotnet
+    - fonts
 
 safe-outputs:
   threat-detection: false
