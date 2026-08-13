@@ -106,7 +106,8 @@ jobs:
     needs: [agent, safe_outputs]
     if: >
       needs.agent.result == 'success' &&
-      needs.safe_outputs.result == 'success'
+      needs.safe_outputs.result == 'success' &&
+      needs.safe_outputs.outputs.created_pr_number != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -142,7 +143,11 @@ jobs:
     if: >
       always() &&
       needs.eligibility.outputs.eligible == 'true' &&
-      needs.agent.result != 'success'
+      (
+        needs.agent.result != 'success' ||
+        needs.safe_outputs.result != 'success' ||
+        needs.safe_outputs.outputs.created_pr_number == ''
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -192,7 +197,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
+    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
 
 model: openai/glm-5-2
 

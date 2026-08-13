@@ -188,7 +188,7 @@ engine:
   id: opencode
   version: "1.2.14"
   env:
-    OPENAI_BASE_URL: ${{ env.OPENAI_BASE_URL }}
+    OPENAI_BASE_URL: https://forge.plainconcepts.com/v1
 
 model: openai/glm-5-2
 
