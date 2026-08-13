@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           files=$(gh api --paginate "repos/$REPO/pulls/$PR/files?per_page=100" --jq '.[].filename')
-          protected=$(printf '%s\n' "$files" | grep -E '^(\.|AGENTS\.md$|ARCHITECTURE\.md$|DESIGN\.md$|opencode\.jsonc$|package\.json$|pnpm-lock\.yaml$|Directory\.Packages\.props$|global\.json$)' || true)
+          protected=$(printf '%s\n' "$files" | grep -E '^(\.github/|AGENTS\.md$|opencode\.jsonc$|package\.json$|pnpm-lock\.yaml$|Directory\.Packages\.props$|global\.json$)' || true)
 
           if [ -n "$protected" ]; then
             echo "requires_review=true" >> "$GITHUB_OUTPUT"

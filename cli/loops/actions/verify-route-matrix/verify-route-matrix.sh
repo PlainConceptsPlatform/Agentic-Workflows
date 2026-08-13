@@ -170,6 +170,15 @@ else
   echo "FAIL: protected changes are not held for Merge Gate review" >&2
 fi
 
+if grep -Fq "grep -E '^(\\.github/|AGENTS\\.md$" "$MERGE_GATE_WORKER_MD" &&
+  ! grep -Fq 'ARCHITECTURE\\.md$' "$MERGE_GATE_WORKER_MD" &&
+  ! grep -Fq 'DESIGN\\.md$' "$MERGE_GATE_WORKER_MD"; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL: documentation files are incorrectly protected by Merge Gate" >&2
+fi
+
 # This repository is public. Every route a human can start from a comment, a review or a
 # label must pass the authorize gate, or anyone able to comment can start a model run that
 # writes code. Asserted here because removing the gate would otherwise be a silent, one-line
