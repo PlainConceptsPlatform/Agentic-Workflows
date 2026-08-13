@@ -13,7 +13,8 @@
   "permission": {
     "read": "allow",
     "external_directory": {
-      "/tmp/**": "allow"
+      "/tmp/**": "allow",
+      "/home/runner/work/_temp/gh-aw/**": "allow"
     }
   },
   "lsp": {

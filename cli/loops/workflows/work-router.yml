@@ -142,7 +142,10 @@ jobs:
               ;;
           esac
 
-          if [ "$ACTOR" = "github-actions[bot]" ]; then
+          # Platform bot owns Safe Outputs. Its label changes must be able to
+          # start the follow-on worker, even though GitHub does not report it
+          # as a repository collaborator.
+          if [ "$ACTOR" = "github-actions[bot]" ] || [ "$ACTOR" = "platform-devbox[bot]" ]; then
             echo "trusted=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
