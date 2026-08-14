@@ -53,9 +53,19 @@ classify_route() {
             fi
             ;;
           refine | implement | direct)
-            # Human adds work label → authorize-bot-work.yml handles this
-            # Route to none here; the bot will add bot-working which triggers the actual work
-            error="waiting for bot to add bot-working label"
+            # If the actor is a bot (e.g. refine→implement transition), route directly.
+            # If the actor is a human, authorize-bot-work.yml will add bot-working which triggers the workflow.
+            if [ "${ACTOR:-}" != "" ] && echo "${ACTOR:-}" | grep -q '\[bot\]$'; then
+              route="${LABEL:-}"
+              issue_number="${EVENT_ISSUE_NUMBER:-}"
+              if [ "${LABEL:-}" = "refine" ]; then
+                refine_mode="first"
+              elif [ "${LABEL:-}" = "direct" ]; then
+                direct_mode="first"
+              fi
+            else
+              error="waiting for bot to add bot-working label"
+            fi
             ;;
         esac
       fi

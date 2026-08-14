@@ -48,6 +48,7 @@ runs:
         EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
         COMMENT_ON_PR: ${{ github.event.issue.pull_request != '' }}
         COMMENT_SENDER_TYPE: ${{ github.event.comment.user.type }}
+        ACTOR: ${{ github.actor }}
         RUN_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
         RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         RUN_ID: ${{ github.event.workflow_run.id }}
