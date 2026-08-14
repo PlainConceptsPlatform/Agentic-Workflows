@@ -1,7 +1,8 @@
 ---
 # Managed by @plainconceptsplatform/workflows. Source: loops/workflows/agent-merge-gate.md. Update with `workflows update --force`; consumer edits may be overwritten.
 env:
-  REPO_RULES: "Make a risk-based merge decision for the selected bot pull request. Merge only when CI is green and no risk indicators are present. Flag security, schema, auth, or calculation changes for human review. Do not merge protected file changes."
+  VERIFY_COMMANDS: "dotnet restore apps/api/Numa.slnx && dotnet build apps/api/Numa.slnx -c Release --no-restore && dotnet test apps/api/tests/Numa.UnitTests/Numa.UnitTests.csproj -c Release --no-build && dotnet test apps/api/tests/Numa.ParityTests/Numa.ParityTests.csproj -c Release --no-build"
+  REPO_RULES: "Make a risk-based merge decision for the selected bot pull request. Merge only when CI is green and no risk indicators are present. Risk indicators for Numa: changes to QuoteCalculator or calculation waterfall, audit appender or hash chain, JWT issuance or permission checks, EF migrations or entity configurations, decimal precision or money handling, quote lifecycle transitions. Any of these require human review. Do not merge protected file changes."
   WORKING_LABEL: bot-working
   IMPLEMENT_LABEL: implement
   REVIEW_LABEL: review
@@ -153,7 +154,7 @@ jobs:
           body: |
             ${{ env.GATE_MARKER }}
             PR #${{ needs.subject.outputs.pr }} changes protected files and cannot be auto-merged.
-            Review the pull request before merging it manually.
+            The `review` label is set: a human must merge this PR manually.
 
             Protected files:
             ${{ needs.protected_changes.outputs.files }}
@@ -165,6 +166,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: read
     steps:
       - name: Checkout workflow actions
         if: needs.subject.outputs.conclusion == 'failure'
@@ -178,7 +180,22 @@ jobs:
         with:
           client-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
-      - name: Mark the failed implementation issue as in progress
+      - name: Check for merge conflicts
+        if: needs.subject.outputs.conclusion == 'failure'
+        id: conflicts
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.subject.outputs.pr }}
+        run: |
+          set -euo pipefail
+          mergeable=$(gh pr view "$PR" --repo "$REPO" --json mergeable --jq '.mergeable')
+          if [ "$mergeable" = "CONFLICTING" ]; then
+            echo "has_conflicts=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_conflicts=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Mark the issue as in progress
         if: needs.subject.outputs.conclusion == 'failure'
         uses: ./.github/actions/add-issue-labels
         with:
@@ -192,6 +209,16 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ needs.subject.outputs.issue }}
           labels: ${{ env.REVIEW_LABEL }}
+      - name: Comment on issue - problems found, solving them
+        if: needs.subject.outputs.conclusion == 'failure'
+        uses: ./.github/actions/create-issue-comment
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          body: |
+            ${{ env.GATE_MARKER }}
+            Problems found in PR #${{ needs.subject.outputs.pr }}. ${{ steps.conflicts.outputs.has_conflicts == 'true' && 'Merge conflicts detected.' || '' }} CI concluded with **${{ needs.subject.outputs.conclusion }}**.
+            Bot is working on fixing it.
   conclude:
     needs: [activation, subject, protected_changes, agent, safe_outputs]
     if: >
@@ -271,6 +298,7 @@ jobs:
           issue-number: ${{ needs.subject.outputs.issue }}
           body: |
             ${{ env.GATE_MARKER }}
+            Bot could not resolve PR #${{ needs.subject.outputs.pr }} automatically. The `review` label is set: a human must take over.
             ${{ env.INCOMPLETE_COMMENT }}
             [View this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
