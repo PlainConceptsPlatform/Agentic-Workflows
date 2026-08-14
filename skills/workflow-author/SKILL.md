@@ -75,7 +75,23 @@ loops/workflows/
       call-propose             agent-propose.md             workflow_call only
       deterministic jobs       bot-approve, audit-close, cleanup-artifacts,
                               stale-recovery, validate
+  authorize-bot-work.yml       human adds implement/refine/direct → bot adds bot-working
 ```
+
+### Bot-working label pattern
+
+gh-aw's `pre_activation` rejects bot actors because bots have `permission: none`. The
+bot-working pattern ensures the bot is the actor while still involving human authorization:
+
+1. Human adds `implement`/`refine`/`direct` label (actor = human)
+2. `authorize-bot-work.yml` validates the human has write permission
+3. Bot adds `bot-working` label via App token
+4. `bot-working` label triggers the work-router (actor = bot)
+5. Classifier routes based on which work label is present
+6. Worker's `pre_activation` passes via `GH_AW_ALLOWED_BOTS` env var
+
+Workers must include `GH_AW_ALLOWED_BOTS: "platform-devbox[bot],github-actions[bot]"`
+in their `env:` block to authorize bot actors through `check_membership.cjs`.
 
 Four things this buys:
 
@@ -153,7 +169,7 @@ cost a real debugging session.
 | The PR never closes its issue | `linkPullRequestToIssue` is not in GitHub's public schema |
 | Merge gate never fires after CI | `workflow_run` does not fire for runs that were pending approval and then approved, and does not fire for PR-triggered CI completions on feature branches |
 | Agent wrote a plausible body or comment, but the worker stopped incomplete | Outcome validation required model-authored label changes or did not classify the output |
-| Router classified a trusted App label event, but every worker job skipped | The called worker did not list the App in `on.bots`, so activation rejected its role `none` |
+| Router classified a trusted App label event, but every worker job skipped | The called worker did not set `GH_AW_ALLOWED_BOTS` in `env:`, so `check_membership.cjs` rejected the bot's role `none`. Set `GH_AW_ALLOWED_BOTS: "platform-devbox[bot],github-actions[bot]"` in the worker's env. `on.bots:` does not work for `workflow_call` workers. |
 
 The full trap descriptions, including the caller permission trap, the artifact prefix trap, the
 composite action manifest trap, and the App-token event loop, are in

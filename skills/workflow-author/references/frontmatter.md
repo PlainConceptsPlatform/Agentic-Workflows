@@ -117,6 +117,28 @@ job moves to the router's classifier, where it is ordinary shell and can be test
 `pre_activation` and `activation` jobs are still generated, and a top-level `if:` is still folded
 into the activation condition, so rung 2 remains available.
 
+### Authorizing bot actors for workflow_call workers
+
+gh-aw's `pre_activation` runs `check_membership.cjs`, which checks `github.actor` permission.
+Bots like `platform-devbox[bot]` always return `permission: none` because GitHub does not treat
+app bots as repository collaborators with write access.
+
+`on.bots:` does not work for `workflow_call` workers (it has no triggering event to filter).
+The bypass is `GH_AW_ALLOWED_BOTS`, a workflow-level `env:` variable that `check_membership.cjs`
+reads via `parseAllowedBots()`. When the actor matches an entry, the script checks if the bot
+is installed on the repository via `getCollaboratorPermissionLevel`. If the API returns 200
+(the bot exists and is visible), `isActive: true` is set and `is_team_member: true` flows
+through to the `activation` job's condition.
+
+```yaml
+env:
+  GH_AW_ALLOWED_BOTS: "platform-devbox[bot],github-actions[bot]"
+```
+
+This is paired with the **bot-working label pattern**: a human adds `implement`/`refine`/`direct`,
+`authorize-bot-work.yml` validates the human's permission and the bot adds `bot-working`, which
+triggers the agentic workflow with the bot as `github.actor`.
+
 ---
 
 ## Router triggers

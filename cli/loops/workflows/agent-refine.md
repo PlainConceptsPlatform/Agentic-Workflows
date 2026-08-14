@@ -13,6 +13,7 @@ env:
   INCOMPLETE_COMMENT: "Automated refinement ended without an outcome. The refine label remains for a retry."
   SAFE_OUTPUT_COMMENT_PREFIX: "Refinement update"
   ISSUE_CONTEXT_PATH: /tmp/gh-aw/agent/issue-context.json
+  GH_AW_ALLOWED_BOTS: "platform-devbox[bot],github-actions[bot]"
   REFINE_ISSUE_PATH: /tmp/gh-aw/refine-issue.json
   REFINE_COMMENTS_PATH: /tmp/gh-aw/refine-comments.json
   GIT_AUTHOR_NAME: "github-actions[bot]"

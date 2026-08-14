@@ -12,6 +12,7 @@ env:
   IMPLEMENT_MARKER: "<!-- agent-implement -->"
   INCOMPLETE_COMMENT: "Automated implementation ended without an outcome. The implement label remains for a retry."
   ISSUE_CONTEXT_PATH: /tmp/gh-aw/agent/implementation-context.json
+  GH_AW_ALLOWED_BOTS: "platform-devbox[bot],github-actions[bot]"
 description: |
   Implements an issue and opens a pull request. Stops there: the merge decision belongs to
   `agent-merge-gate.md`, which runs once CI has reported. Replaces the `impl-*` chain in

@@ -8,6 +8,7 @@ env:
   DIRECT_MARKER: "<!-- agent-direct -->"
   INCOMPLETE_COMMENT: "Automated direct execution ended without an outcome. The direct label remains for a retry."
   ISSUE_CONTEXT_PATH: /tmp/gh-aw/agent/issue-context.json
+  GH_AW_ALLOWED_BOTS: "platform-devbox[bot],github-actions[bot]"
 description: |
   Executes a free-form instruction from an issue body and posts the results back on the same
   issue. The issue body IS the prompt — the agent does whatever the maintainer asked for and
