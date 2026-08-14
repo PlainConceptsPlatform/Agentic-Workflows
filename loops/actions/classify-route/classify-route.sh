@@ -35,19 +35,27 @@ classify_route() {
     issues)
       if [ "${ACTION:-}" = "labeled" ]; then
         case "${LABEL:-}" in
-          refine)
-            route="refine"
-            refine_mode="first"
-            issue_number="${EVENT_ISSUE_NUMBER:-}"
+          bot-working)
+            # Bot adds bot-working → route based on which work label is present
+            if has_label implement; then
+              route="implement"
+              issue_number="${EVENT_ISSUE_NUMBER:-}"
+            elif has_label refine; then
+              route="refine"
+              refine_mode="first"
+              issue_number="${EVENT_ISSUE_NUMBER:-}"
+            elif has_label direct; then
+              route="direct"
+              direct_mode="first"
+              issue_number="${EVENT_ISSUE_NUMBER:-}"
+            else
+              error="bot-working added but no work label (implement/refine/direct) found"
+            fi
             ;;
-          implement)
-            route="implement"
-            issue_number="${EVENT_ISSUE_NUMBER:-}"
-            ;;
-          direct)
-            route="direct"
-            direct_mode="first"
-            issue_number="${EVENT_ISSUE_NUMBER:-}"
+          refine | implement | direct)
+            # Human adds work label → authorize-bot-work.yml handles this
+            # Route to none here; the bot will add bot-working which triggers the actual work
+            error="waiting for bot to add bot-working label"
             ;;
         esac
       fi

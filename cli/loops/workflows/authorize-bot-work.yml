@@ -1,0 +1,81 @@
+# Human adds implement/refine/direct label → validates permission → bot adds bot-working
+# This ensures the bot is the actor for all agentic workflows.
+name: "Authorize Bot Work"
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  authorize:
+    # Only trigger for implement/refine/direct labels, and only if bot-working is NOT already present
+    if: >
+      (github.event.label.name == 'implement' ||
+       github.event.label.name == 'refine' ||
+       github.event.label.name == 'direct') &&
+      !contains(github.event.issue.labels.*.name, 'bot-working')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check actor permission
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          
+          # Bots don't need validation - they're already authorized
+          if [[ "$ACTOR" == *"[bot]"* ]]; then
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Bot actor ($ACTOR) - skipping permission check"
+            exit 0
+          fi
+          
+          permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$ACTOR/permission" \
+            --jq '.permission' 2>/dev/null || echo "none")
+          
+          case "$permission" in
+            admin | maintain | write)
+              echo "authorized=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::$ACTOR has $permission permission - authorized"
+              ;;
+            *)
+              echo "authorized=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::$ACTOR has '$permission' permission - not authorized"
+              ;;
+          esac
+
+      - name: Checkout for App token action
+        if: steps.check.outputs.authorized == 'true'
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Generate App token
+        if: steps.check.outputs.authorized == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Bot adds bot-working label
+        if: steps.check.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABEL: ${{ github.event.label.name }}
+        run: |
+          set -euo pipefail
+          
+          echo "Adding bot-working label to issue #$ISSUE_NUMBER (triggered by $LABEL)"
+          gh issue edit "$ISSUE_NUMBER" --add-label "bot-working"
+          
+          echo "::notice::bot-working label added - bot will now own the $LABEL workflow"
