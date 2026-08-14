@@ -361,17 +361,9 @@ jobs:
     steps:
       # Runs only the default-branch workflow and never checks out pull-request code.
       # External users cannot impersonate github-actions[bot].
-      - name: Create Platform bot token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ secrets.BOT_APP_ID }}
-          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
-          permission-actions: write
-          permission-pull-requests: read
       - name: Approve checks and dispatch Merge Gate for trusted bot pull requests
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
