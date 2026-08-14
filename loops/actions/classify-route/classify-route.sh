@@ -11,7 +11,7 @@ set -euo pipefail
 readonly AUDIT_CRON="17 1 * * 1"
 readonly AUDIT_CLOSE_CRON="43 3 * * *"
 readonly CLEANUP_ARTIFACTS_CRON="0 6 * * *"
-readonly RECONCILE_BOT_PR_RUNS_CRON="*/5 * * * *"
+readonly RECONCILE_BOT_PR_RUNS_CRON="*/15 * * * *"
 readonly STALE_RECOVERY_CRON="0 */2 * * *"
 # Daily, but it proposes far less often than daily: the worker holds one open
 # proposal at a time and skips while that slot is filled. The cron is a heartbeat,
