@@ -310,7 +310,18 @@ describe("catalog installation", () => {
     await ensurePreCommitHook(repositoryPath);
 
     await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8"))
-      .resolves.toContain("if git diff --cached --name-only -- .github | grep -q .; then");
+       .resolves.toContain("if git diff --cached --name-only -- .github | grep -q .; then");
+  });
+
+  it("repairs a malformed compiler hook prefixed with pnpm exec", async () => {
+    const repositoryPath = await createDirectory({
+      ".husky/pre-commit": "pnpm exec if git diff --cached --name-only -- .github | grep -q .; then\n  node scripts/compile-agent-workflows.mjs\n  git add -- .github/workflows/*.lock.yml\n  [ ! -f .github/actions/actions-lock.json ] || git add -- .github/actions/actions-lock.json\nfi\n",
+    });
+
+    await ensurePreCommitHook(repositoryPath);
+
+    await expect(readFile(join(repositoryPath, ".husky", "pre-commit"), "utf8"))
+      .resolves.not.toContain("pnpm exec if");
   });
 
   it("leaves consumer files untouched when staged workflow compilation fails", async () => {

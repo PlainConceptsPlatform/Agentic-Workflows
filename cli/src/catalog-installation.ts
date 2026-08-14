@@ -225,7 +225,8 @@ async function preCommitHookUpdate(repositoryPath: string): Promise<{ target: st
     return { target, content: managedLines };
   }
 
-  const content = await readFile(hookPath, "utf8");
+  const content = (await readFile(hookPath, "utf8"))
+    .replace("pnpm exec if git diff --cached --name-only -- .github | grep -q .; then", "if git diff --cached --name-only -- .github | grep -q .; then");
   if (content.includes("compile-agent-workflows")) {
     const legacyLines = `${compileLine}\n${stageLine}\n${actionLockLine}\n`;
     if (content.includes(managedLines)) return { target, content };
