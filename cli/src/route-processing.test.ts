@@ -17,6 +17,7 @@ on:
     - cron: "17 1 * * 1"
     - cron: "43 3 * * *"
     - cron: "0 6 * * *"
+    - cron: "*/5 * * * *"
     - cron: "0 */2 * * *"
     - cron: "29 7 * * *"
 
@@ -36,6 +37,7 @@ on:
           - propose
           - audit-close
           - cleanup-artifacts
+          - reconcile-bot-pr-runs
           - stale-recovery
           - validate
 
@@ -80,6 +82,7 @@ set -euo pipefail
 readonly AUDIT_CRON="17 1 * * 1"
 readonly AUDIT_CLOSE_CRON="43 3 * * *"
 readonly CLEANUP_ARTIFACTS_CRON="0 6 * * *"
+readonly RECONCILE_BOT_PR_RUNS_CRON="*/5 * * * *"
 readonly STALE_RECOVERY_CRON="0 */2 * * *"
 readonly PROPOSE_CRON="29 7 * * *"
 
@@ -93,6 +96,7 @@ classify_route() {
         "\$AUDIT_CRON") route="audit" ;;
         "\$AUDIT_CLOSE_CRON") route="audit-close" ;;
         "\$CLEANUP_ARTIFACTS_CRON") route="cleanup-artifacts" ;;
+        "\$RECONCILE_BOT_PR_RUNS_CRON") route="reconcile-bot-pr-runs" ;;
         "\$STALE_RECOVERY_CRON") route="stale-recovery" ;;
         "\$PROPOSE_CRON") route="propose" ;;
         *) error="no route for cron '\${SCHEDULE:-}'" ;;
@@ -115,7 +119,7 @@ classify_route() {
           route="\${OPERATION}"
           trigger_kind="\${INPUT_TRIGGER_KIND:-manual}"
           ;;
-        audit-close | cleanup-artifacts | stale-recovery | validate)
+        audit-close | cleanup-artifacts | reconcile-bot-pr-runs | stale-recovery | validate)
           route="\${OPERATION}"
           ;;
         *)
@@ -141,7 +145,7 @@ set -euo pipefail
 
 echo "── Router wiring ─────────────────────────────────────────────────────────"
 for route in refine implement direct apply-review merge-gate audit propose bot-approve \\
-  audit-close cleanup-artifacts stale-recovery validate; do
+  audit-close cleanup-artifacts reconcile-bot-pr-runs stale-recovery validate; do
   if grep -q "route == '\${route}'" "\$ROUTER_YML"; then
     PASS=\$((PASS + 1))
   else

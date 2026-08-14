@@ -148,6 +148,8 @@ assert_route "merge-gate dispatch accepts a positive pull request" merge-gate \
   EVENT=workflow_dispatch OPERATION=merge-gate INPUT_PR_NUMBER=7
 assert_route "stale-recovery dispatch needs no numbers" stale-recovery \
   EVENT=workflow_dispatch OPERATION=stale-recovery
+assert_route "reconcile-bot-pr-runs dispatch needs no numbers" reconcile-bot-pr-runs \
+  EVENT=workflow_dispatch OPERATION=reconcile-bot-pr-runs
 assert_route "an unknown operation routes nowhere" none \
   EVENT=workflow_dispatch OPERATION=deploy-everything
 assert "a scheduled audit reports its trigger kind" scheduled \
@@ -184,7 +186,7 @@ for route in refine implement direct apply-review; do
 done
 
 for route in refine implement direct apply-review merge-gate audit propose bot-approve \
-  audit-close cleanup-artifacts stale-recovery validate; do
+  audit-close cleanup-artifacts reconcile-bot-pr-runs stale-recovery validate; do
   if grep -q "route == '${route}'" "$ROUTER_YML"; then
     PASS=$((PASS + 1))
   else

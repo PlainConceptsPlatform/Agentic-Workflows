@@ -54,6 +54,7 @@ on:
     - cron: "17 1 * * 1"
     - cron: "43 3 * * *"
     - cron: "0 6 * * *"
+    - cron: "*/5 * * * *"
     - cron: "0 */2 * * *"
     - cron: "29 7 * * *"
 
@@ -73,6 +74,7 @@ on:
           - propose
           - audit-close
           - cleanup-artifacts
+          - reconcile-bot-pr-runs
           - stale-recovery
           - validate
       issue-number:
@@ -347,6 +349,84 @@ jobs:
             echo "Approving run $run_id"
             gh api "repos/$REPO/actions/runs/$run_id/approve" --method POST
           done
+
+  reconcile-bot-pr-runs:
+    needs: classify
+    if: needs.classify.outputs.route == 'reconcile-bot-pr-runs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      pull-requests: read
+    steps:
+      # Runs only the default-branch workflow and never checks out pull-request code.
+      # External users cannot impersonate github-actions[bot].
+      - name: Create Platform bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          permission-actions: write
+          permission-pull-requests: read
+      - name: Approve checks and dispatch Merge Gate for trusted bot pull requests
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/$REPO/pulls?state=open&per_page=100" |
+            jq -r --arg repo "$REPO" '
+              .[]
+              | select(
+                  .user.login == "github-actions[bot]"
+                  and .head.repo.full_name == $repo
+                )
+              | [.number, .head.ref] | @tsv
+            ' |
+            while IFS=$'\t' read -r pr_number branch; do
+              gh api "repos/$REPO/actions/runs?status=action_required&branch=$branch" \
+                --jq '.workflow_runs[]
+                  | select(
+                      .event == "pull_request"
+                      and (.name == "App: CI" or .name == "Visual evidence")
+                    )
+                  | .id' |
+                while IFS= read -r run_id; do
+                  echo "Approving trusted bot run $run_id"
+                  gh api "repos/$REPO/actions/runs/$run_id/approve" --method POST
+                done
+
+              gate_recorded=$(gh api "repos/$REPO/issues/$pr_number/comments?per_page=100" \
+                --jq 'any(.[]; .body | contains("<!-- agent-merge-gate -->"))')
+              if [ "$gate_recorded" = "true" ]; then
+                continue
+              fi
+
+              ci=$(gh api "repos/$REPO/actions/runs?branch=$branch&per_page=100" \
+                --jq '[.workflow_runs[]
+                  | select(
+                      .name == "App: CI"
+                      and .event == "pull_request"
+                      and .status == "completed"
+                      and (.conclusion == "success" or .conclusion == "failure")
+                    )
+                  ] | sort_by(.created_at) | last // empty | [.id, .conclusion] | @tsv')
+              if [ -z "$ci" ]; then
+                continue
+              fi
+
+              IFS=$'\t' read -r ci_run_id ci_conclusion <<<"$ci"
+              echo "Dispatching Merge Gate for PR #$pr_number ($ci_conclusion, run $ci_run_id)"
+              gh api "repos/$REPO/actions/workflows/work-router.yml/dispatches" \
+                --method POST \
+                -f ref="$DEFAULT_BRANCH" \
+                -f "inputs[operation]=merge-gate" \
+                -f "inputs[pr-number]=$pr_number" \
+                -f "inputs[ci-conclusion]=$ci_conclusion" \
+                -f "inputs[ci-run-id]=$ci_run_id"
 
   audit-close:
     needs: classify
