@@ -57,7 +57,7 @@ on:
 # values and `on.steps` outputs do not reach the agent job.
 jobs:
   subject:
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: read
@@ -86,7 +86,7 @@ jobs:
   protected_changes:
     needs: subject
     if: needs.subject.outputs.found == 'true'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       pull-requests: read
     outputs:
@@ -119,7 +119,7 @@ jobs:
   review_required:
     needs: [subject, protected_changes]
     if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review == 'true'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
@@ -162,7 +162,7 @@ jobs:
   reserve:
     needs: subject
     if: needs.subject.outputs.found == 'true'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
@@ -211,7 +211,7 @@ jobs:
       needs.agent.result == 'success' &&
       needs.safe_outputs.result == 'success' &&
       needs.protected_changes.outputs.requires_review != 'true'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: write
       issues: write
@@ -250,7 +250,7 @@ jobs:
       needs.subject.outputs.found == 'true' &&
       needs.protected_changes.outputs.requires_review != 'true' &&
       needs.agent.result != 'success'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
@@ -294,8 +294,8 @@ jobs:
 
 if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review != 'true'
 
-runs-on: ubuntu-latest
-runs-on-slim: ubuntu-latest
+runs-on: RunnerLandingZone
+runs-on-slim: RunnerLandingZone
 
 secrets:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

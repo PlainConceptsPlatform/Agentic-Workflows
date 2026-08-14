@@ -44,7 +44,7 @@ on:
 # substantive feedback. A custom job, not `on.steps`, because the prompt needs these values.
 jobs:
   subject:
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: read
@@ -113,7 +113,7 @@ jobs:
   reserve:
     needs: subject
     if: needs.subject.outputs.found == 'true' && needs.subject.outputs.issue != ''
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
@@ -145,7 +145,7 @@ jobs:
     if: >
       needs.agent.result == 'success' &&
       needs.safe_outputs.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: write
       issues: write
@@ -174,7 +174,7 @@ jobs:
       always() &&
       needs.subject.outputs.found == 'true' &&
       needs.agent.result != 'success'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
@@ -213,8 +213,8 @@ jobs:
 
 if: needs.subject.outputs.found == 'true'
 
-runs-on: ubuntu-latest
-runs-on-slim: ubuntu-latest
+runs-on: RunnerLandingZone
+runs-on-slim: RunnerLandingZone
 
 secrets:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

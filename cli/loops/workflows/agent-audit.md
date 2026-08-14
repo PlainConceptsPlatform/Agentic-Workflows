@@ -42,8 +42,8 @@ on:
     query: "is:issue is:open label:audit"
     max: 3
 
-runs-on: ubuntu-latest
-runs-on-slim: ubuntu-latest
+runs-on: RunnerLandingZone
+runs-on-slim: RunnerLandingZone
 
 secrets:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -76,7 +76,7 @@ jobs:
       needs.agent.result == 'success' &&
       needs.safe_outputs.result == 'success' &&
       needs.safe_outputs.outputs.process_safe_outputs_processed_count != '0'
-    runs-on: ubuntu-latest
+    runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
