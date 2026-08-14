@@ -1,5 +1,8 @@
 # Human adds implement/refine/direct label → validates permission → bot adds bot-working
 # This ensures the bot is the actor for all agentic workflows.
+#
+# IMPORTANT: Only triggers for HUMAN actors. When the bot transitions refine→implement,
+# it adds bot-working itself, so authorize-bot-work must not fire again.
 name: "Authorize Bot Work"
 
 on:
@@ -11,12 +14,14 @@ permissions:
 
 jobs:
   authorize:
-    # Only trigger for implement/refine/direct labels, and only if bot-working is NOT already present
+    # Only trigger for implement/refine/direct labels from HUMANS (not bots),
+    # and only if bot-working is NOT already present
     if: >
       (github.event.label.name == 'implement' ||
        github.event.label.name == 'refine' ||
        github.event.label.name == 'direct') &&
-      !contains(github.event.issue.labels.*.name, 'bot-working')
+      !contains(github.event.issue.labels.*.name, 'bot-working') &&
+      !endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -30,13 +35,6 @@ jobs:
           ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
-          
-          # Bots don't need validation - they're already authorized
-          if [[ "$ACTOR" == *"[bot]"* ]]; then
-            echo "authorized=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Bot actor ($ACTOR) - skipping permission check"
-            exit 0
-          fi
           
           permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$ACTOR/permission" \
             --jq '.permission' 2>/dev/null || echo "none")

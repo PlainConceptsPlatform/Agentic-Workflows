@@ -195,20 +195,6 @@ jobs:
           else
             echo "has_conflicts=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Mark the issue as in progress
-        if: needs.subject.outputs.conclusion == 'failure'
-        uses: ./.github/actions/add-issue-labels
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          issue-number: ${{ needs.subject.outputs.issue }}
-          labels: ${{ env.WORKING_LABEL }}
-      - name: Clear the human-needed flag
-        if: needs.subject.outputs.conclusion == 'failure'
-        uses: ./.github/actions/remove-issue-labels
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          issue-number: ${{ needs.subject.outputs.issue }}
-          labels: ${{ env.REVIEW_LABEL }}
       - name: Comment on issue - problems found, solving them
         if: needs.subject.outputs.conclusion == 'failure'
         uses: ./.github/actions/create-issue-comment
@@ -217,7 +203,7 @@ jobs:
           issue-number: ${{ needs.subject.outputs.issue }}
           body: |
             ${{ env.GATE_MARKER }}
-            Problems found in PR #${{ needs.subject.outputs.pr }}. ${{ steps.conflicts.outputs.has_conflicts == 'true' && 'Merge conflicts detected.' || '' }} CI concluded with **${{ needs.subject.outputs.conclusion }}**.
+            Problems found in PR #${{ needs.subject.outputs.pr }}. ${{ steps.conflicts.outputs.has_conflicts == 'true' && 'Merge conflicts detected.' || 'CI failed.' }}
             Bot is working on fixing it.
   conclude:
     needs: [activation, subject, protected_changes, agent, safe_outputs]
