@@ -419,6 +419,7 @@ jobs:
                 -f "inputs[pr-number]=$pr_number" \
                 -f "inputs[ci-conclusion]=$ci_conclusion" \
                 -f "inputs[ci-run-id]=$ci_run_id"
+            done
 
   audit-close:
     needs: classify
