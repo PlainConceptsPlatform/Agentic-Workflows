@@ -37,7 +37,7 @@ on:
     types: [submitted]
 
   pull_request_target:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
   workflow_run:
     workflows: ["App: CI", "CI"]
     types: [completed]
@@ -389,6 +389,7 @@ jobs:
               | select(
                   .user.login == "github-actions[bot]"
                   and .head.repo.full_name == $repo
+                  and .mergeable_state != "dirty"
                 )
               | [.number, .head.ref] | @tsv
             ' |

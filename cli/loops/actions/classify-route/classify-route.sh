@@ -78,7 +78,17 @@ classify_route() {
       ;;
 
     pull_request_target)
-      route="bot-approve"
+      if [ "${ACTION:-}" = "labeled" ] && [ "${LABEL:-}" = "merge-gate" ]; then
+        # Human adds merge-gate label to bot PR → triggers merge-gate with human actor
+        # This bypasses gh-aw's bot membership check since the actor is human
+        route="merge-gate"
+        pr_number="${EVENT_PR_NUMBER:-}"
+        # CI status will be fetched by the merge-gate workflow
+        ci_conclusion=""
+        ci_run_id=""
+      else
+        route="bot-approve"
+      fi
       ;;
 
     workflow_run)

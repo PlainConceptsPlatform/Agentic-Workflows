@@ -9,8 +9,9 @@ inputs:
     description: Pull request number to gate.
     required: true
   ci-conclusion:
-    description: Conclusion reported by the CI run that triggered this gate.
-    required: true
+    description: Conclusion reported by the CI run that triggered this gate. If empty, fetches from the PR's latest CI run.
+    required: false
+    default: ''
   linked-issue:
     description: Issue the pull request closes, when the router already resolved it.
     required: false
@@ -30,8 +31,11 @@ outputs:
     description: Issue number the pull request closes.
     value: ${{ steps.identify.outputs.issue }}
   conclusion:
-    description: CI conclusion, passed through unchanged.
+    description: CI conclusion, passed through unchanged or fetched from latest CI run.
     value: ${{ steps.identify.outputs.conclusion }}
+  run-id:
+    description: CI run ID when fetched.
+    value: ${{ steps.identify.outputs.run-id }}
 runs:
   using: composite
   steps:
@@ -87,11 +91,30 @@ runs:
           fi
         fi
 
+        # Fetch CI conclusion if not provided (label-triggered runs)
+        ci_conclusion="$CONCLUSION"
+        ci_run_id=""
+        if [ -z "$ci_conclusion" ]; then
+          head_sha="$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid --jq '.headRefOid')"
+          ci_run="$(gh api "repos/$REPO/actions/runs?head_sha=$head_sha&per_page=100" \
+            --jq '[.workflow_runs[] | select(.name == "App: CI" or .name == "CI")] | sort_by(.created_at) | last')"
+          
+          if [ -n "$ci_run" ] && [ "$ci_run" != "null" ]; then
+            ci_conclusion="$(jq -r '.conclusion // "pending"' <<<"$ci_run")"
+            ci_run_id="$(jq -r '.id' <<<"$ci_run")"
+            echo "::notice::Fetched CI status: $ci_conclusion (run $ci_run_id)"
+          else
+            ci_conclusion="unknown"
+            echo "::warning::No CI run found for PR #$PR_NUMBER"
+          fi
+        fi
+
         {
           echo "found=true"
           echo "pr=$PR_NUMBER"
           echo "issue=$issue"
-          echo "conclusion=$CONCLUSION"
+          echo "conclusion=$ci_conclusion"
+          echo "run-id=$ci_run_id"
         } >> "$GITHUB_OUTPUT"
 
-        echo "PR #$PR_NUMBER closes #$issue; CI concluded $CONCLUSION"
+        echo "PR #$PR_NUMBER closes #$issue; CI concluded $ci_conclusion"
