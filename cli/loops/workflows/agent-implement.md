@@ -97,12 +97,6 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ inputs.issue-number }}
           labels: ${{ env.REVIEW_LABEL }}
-      - name: Ensure implement label is present
-        uses: ./.github/actions/add-issue-labels
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          issue-number: ${{ inputs.issue-number }}
-          labels: ${{ env.IMPLEMENT_LABEL }}
   conclude:
     needs: [agent, safe_outputs]
     if: >
@@ -164,7 +158,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ inputs.issue-number }}
-          labels: ${{ env.WORKING_LABEL }}
+          labels: ${{ env.WORKING_LABEL }},implement
       - name: Flag for human review
         uses: ./.github/actions/add-issue-labels
         with:
