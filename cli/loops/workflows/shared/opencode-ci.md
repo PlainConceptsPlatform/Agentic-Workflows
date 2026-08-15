@@ -198,3 +198,4 @@ pre-agent-steps:
       # nor this provider, so both survive and `awf-proxy` is added alongside.
       echo "Wrote $CONFIG from $FRAGMENT:"
       jq -r '"  model: \(.model // "unset")", "  plugins: \(.plugin // [] | join(", "))", "  providers: \(.provider // {} | keys | join(", "))"' "$CONFIG"
+---
