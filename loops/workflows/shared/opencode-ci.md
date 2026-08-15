@@ -139,6 +139,19 @@ pre-agent-steps:
       npm install -g "@fission-ai/openspec@1.8.0"
       openspec --version
 
+  - name: Install playwright-cli (for visual evidence capture)
+    run: |
+      set -euo pipefail
+
+      if command -v playwright-cli > /dev/null 2>&1; then
+        echo "playwright-cli already installed"
+        exit 0
+      fi
+
+      npm install -g @playwright/cli@latest
+      playwright-cli install --browser chromium 2>/dev/null || true
+      playwright-cli --version
+
   - name: Cache NuGet packages
     uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
     with:
