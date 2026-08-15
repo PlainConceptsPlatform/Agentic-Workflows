@@ -35,9 +35,9 @@ for (const file of readdirSync(workflowDirectory)) {
   const path = join(workflowDirectory, file);
   const content = readFileSync(path, "utf8");
   const patched = content
-    .replaceAll("opencode run --print-logs --log-level DEBUG", "opencode run --attach http://127.0.0.1:4096 --log-level ERROR")
-    .replaceAll("opencode run --print-logs --log-level ERROR", "opencode run --attach http://127.0.0.1:4096 --log-level ERROR")
-    .replaceAll("opencode run --log-level ERROR", "opencode run --attach http://127.0.0.1:4096 --log-level ERROR")
+    .replaceAll("opencode run --print-logs --log-level DEBUG", "opencode run --port 4096 --log-level ERROR")
+    .replaceAll("opencode run --print-logs --log-level ERROR", "opencode run --port 4096 --log-level ERROR")
+    .replaceAll("opencode run --log-level ERROR", "opencode run --port 4096 --log-level ERROR")
     .replaceAll("--log-level DEBUG", "--log-level ERROR")
     .replace(/GH_AW_INFO_MODEL_COSTS: '[^']*'/g, "GH_AW_INFO_MODEL_COSTS: '{\"providers\":{}}'");
 

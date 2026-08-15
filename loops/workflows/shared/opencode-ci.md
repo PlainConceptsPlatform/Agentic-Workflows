@@ -11,7 +11,7 @@ description: |
 
   Consumer-specific steps (NuGet, .NET restore, OpenSpec, etc.) should be added after the
   shared baseline in the consumer copy. The merge step below is package-owned and required
-  for the agent to resolve the `plainconcepts` provider and its models.
+  for the agent to resolve its provider and its models.
 
 # Consumer repositories should add stack-specific steps (NuGet cache, dotnet restore,
 # OpenSpec, Playwright, etc.) after the shared baseline. The merge step at the end is
@@ -21,12 +21,12 @@ pre-agent-steps:
   - name: Create agent scratch directory
     run: mkdir -p .opencode/.tmp
 
-  - name: Start OpenCode server (warm server for faster agent spawning)
+  - name: Start OpenCode server (persistent warm server for faster agent runs)
     run: |
       set -euo pipefail
 
       OPENCODE_PORT=4096
-      mkdir -p /tmp/gh-aw
+      mkdir -p /tmp/opencode-data /tmp/gh-aw
 
       # Check if server is already running
       if curl -sf "http://127.0.0.1:${OPENCODE_PORT}/health" >/dev/null 2>&1; then
@@ -35,6 +35,7 @@ pre-agent-steps:
       fi
 
       echo "Starting OpenCode server on port ${OPENCODE_PORT}..."
+      export XDG_DATA_HOME=/tmp/opencode-data
       nohup opencode serve --port "${OPENCODE_PORT}" --hostname 127.0.0.1 \
         > /tmp/gh-aw/opencode-server.log 2>&1 &
 
@@ -58,11 +59,13 @@ pre-agent-steps:
     run: |
       set -euo pipefail
 
-      if ! command -v rg > /dev/null; then
-        sudo apt-get update
-        sudo apt-get install --yes ripgrep
+      if command -v rg > /dev/null 2>&1; then
+        echo "ripgrep already installed: $(rg --version | head -1)"
+        exit 0
       fi
 
+      sudo apt-get update
+      sudo apt-get install --yes ripgrep
       rg --version
 
   - name: Activate the pnpm version package.json pins
@@ -83,6 +86,11 @@ pre-agent-steps:
     run: |
       set -euo pipefail
 
+      if command -v rtk > /dev/null 2>&1 && rtk --version 2>/dev/null | grep -q "${RTK_VERSION}"; then
+        echo "RTK ${RTK_VERSION} already installed"
+        exit 0
+      fi
+
       tarball="$RUNNER_TEMP/rtk.tar.gz"
       curl -fsSL -o "$tarball" \
         "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-x86_64-unknown-linux-musl.tar.gz"
@@ -97,6 +105,12 @@ pre-agent-steps:
   - name: Install agentmemory
     run: |
       set -euo pipefail
+
+      if command -v agentmemory > /dev/null 2>&1 && agentmemory --version 2>/dev/null | grep -q "${AGENTMEMORY_VERSION}"; then
+        echo "agentmemory ${AGENTMEMORY_VERSION} already installed"
+        exit 0
+      fi
+
       npm install -g "@agentmemory/agentmemory@${AGENTMEMORY_VERSION}"
       agentmemory --version
 
@@ -104,26 +118,33 @@ pre-agent-steps:
     continue-on-error: true
     run: |
       set -euo pipefail
-      npm install -g "@colbymchenry/codegraph@${CODEGRAPH_VERSION}"
+
+      if command -v codegraph > /dev/null 2>&1 && codegraph --version 2>/dev/null | grep -q "${CODEGRAPH_VERSION}"; then
+        echo "codegraph ${CODEGRAPH_VERSION} already installed"
+      else
+        npm install -g "@colbymchenry/codegraph@${CODEGRAPH_VERSION}"
+      fi
+
       codegraph init
 
-  - name: Install opencode plugin dependencies
+  - name: Install OpenSpec CLI
     run: |
       set -euo pipefail
 
-      if [ ! -f .opencode/package.json ]; then
-        echo "No .opencode/package.json, nothing to install"
+      if command -v openspec > /dev/null 2>&1 && openspec --version 2>/dev/null | grep -q "1.8.0"; then
+        echo "openspec 1.8.0 already installed"
         exit 0
       fi
 
-      # These plugins are optional tooling for the agent, not something the task
-      # depends on, so a transitive peer conflict between two of them must not
-      # take down every audit, propose and implement run. Strict first, so a real
-      # incompatibility is still visible in the log.
-      if ! npm install --prefix .opencode; then
-        echo "::warning::Strict npm install failed on a peer conflict. Retrying with --legacy-peer-deps; check .opencode/package.json."
-        npm install --prefix .opencode --legacy-peer-deps
-      fi
+      npm install -g "@fission-ai/openspec@1.8.0"
+      openspec --version
+
+  - name: Cache NuGet packages
+    uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    with:
+      path: ~/.nuget/packages
+      key: nuget-${{ runner.os }}-${{ hashFiles('**/*.slnx', '**/Directory.Packages.props') }}
+      restore-keys: nuget-${{ runner.os }}-
 
   - name: Install workspace dependencies
     run: pnpm install --frozen-lockfile
@@ -164,4 +185,3 @@ pre-agent-steps:
       # nor this provider, so both survive and `awf-proxy` is added alongside.
       echo "Wrote $CONFIG from $FRAGMENT:"
       jq -r '"  model: \(.model // "unset")", "  plugins: \(.plugin // [] | join(", "))", "  providers: \(.provider // {} | keys | join(", "))"' "$CONFIG"
----
