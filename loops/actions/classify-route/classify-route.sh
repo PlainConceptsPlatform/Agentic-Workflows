@@ -77,6 +77,8 @@ classify_route() {
         pr_number="${EVENT_ISSUE_NUMBER:-}"
       elif [ "${COMMENT_SENDER_TYPE:-}" = "Bot" ]; then
         error="comment authored by a bot"
+      elif has_label implement; then
+        error="issue has implement label; comments do not re-trigger implement"
       elif has_label direct; then
         route="direct"
         direct_mode="continue"

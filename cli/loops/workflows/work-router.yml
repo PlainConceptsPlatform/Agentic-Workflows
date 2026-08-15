@@ -387,7 +387,7 @@ jobs:
             jq -r --arg repo "$REPO" '
               .[]
               | select(
-                  .user.login == "github-actions[bot]"
+                  (.user.login == "github-actions[bot]" or .user.login == "app/github-actions" or .user.login == "platform-devbox[bot]")
                   and .head.repo.full_name == $repo
                   and .mergeable_state != "dirty"
                 )
@@ -406,10 +406,23 @@ jobs:
                   gh api "repos/$REPO/actions/runs/$run_id/approve" --method POST
                 done
 
+              # Check if merge-gate already ran for this PR (comment on PR or linked issue)
               gate_recorded=$(gh api "repos/$REPO/issues/$pr_number/comments?per_page=100" \
                 --jq 'any(.[]; .body | contains("<!-- agent-merge-gate -->"))')
               if [ "$gate_recorded" = "true" ]; then
+                echo "Merge gate already recorded for PR #$pr_number, skipping"
                 continue
+              fi
+
+              # Also check the linked issue comments if the PR closes an issue
+              linked_issue=$(gh pr view "$pr_number" --repo "$REPO" --json closingIssuesReferences --jq '.closingIssuesReferences[0].number // empty' 2>/dev/null || true)
+              if [ -n "$linked_issue" ]; then
+                gate_recorded=$(gh api "repos/$REPO/issues/$linked_issue/comments?per_page=100" \
+                  --jq 'any(.[]; .body | contains("<!-- agent-merge-gate -->"))')
+                if [ "$gate_recorded" = "true" ]; then
+                  echo "Merge gate already recorded on issue #$linked_issue for PR #$pr_number, skipping"
+                  continue
+                fi
               fi
 
               ci=$(gh api "repos/$REPO/actions/runs?branch=$branch&per_page=100" \
