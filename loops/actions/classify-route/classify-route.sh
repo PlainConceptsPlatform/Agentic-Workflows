@@ -37,7 +37,10 @@ classify_route() {
         case "${LABEL:-}" in
           bot-working)
             # Bot adds bot-working → route based on which work label is present
-            if has_label implement; then
+            # BUT: if review label is present, do NOT route (human review required)
+            if has_label review; then
+              error="issue has review label; bot-working does not re-trigger while human review is required"
+            elif has_label implement; then
               route="implement"
               issue_number="${EVENT_ISSUE_NUMBER:-}"
             elif has_label refine; then
