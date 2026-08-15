@@ -5,6 +5,8 @@
 # it adds bot-working itself, so authorize-bot-work must not fire again.
 name: "Authorize Bot Work"
 
+run-name: "Authorizing: ${{ github.event.issue.title }} (#${{ github.event.issue.number }})"
+
 on:
   issues:
     types: [labeled]
