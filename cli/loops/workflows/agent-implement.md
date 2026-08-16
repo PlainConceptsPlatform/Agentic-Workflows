@@ -263,10 +263,17 @@ timeout-minutes: 90
      ${{ env.VERIFY_COMMANDS }}
      ```
 
-    If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
-    a check to make it pass.
+     If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
+     a check to make it pass.
 
- 5. You **must** call exactly one safe-output tool before finishing, or the workflow
+  5. Before creating the pull request, update `changelog.json` in the project's `public/` folder
+     (create `public/changelog.json` if it does not exist). The file has the shape
+     `{"version":1,"changes":[...]}`. Prepend a new entry with `timestamp`, `issue`, `pr`
+     (leave `pr` as 0 if unknown), `title` (issue title), `summary` (1-2 sentences of what
+     you changed), and `commit` (short SHA). Keep at most 10 entries: if there are already 10,
+     remove the oldest. Commit this file as part of the PR.
+
+  6. You **must** call exactly one safe-output tool before finishing, or the workflow
     reports a failure. All safe-output tools are on the `safeoutputs` MCP server. Call
     them using the `safeoutputs/<tool>` convention , for example:
 
