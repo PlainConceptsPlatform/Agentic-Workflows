@@ -267,8 +267,8 @@ timeout-minutes: 90
      a check to make it pass.
 
   5. Before creating the pull request, update `changelog.json` in the project's
-     `public/` folder (create `public/changelog.json` if it does not exist; if
-     the project is a monorepo, use `apps/web/public/changelog.json`). The file
+     `src/shared/data/` folder (create `src/shared/data/changelog.json` if it does not
+     exist; in a monorepo use `apps/web/src/shared/data/changelog.json`). The file
      has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
      with `"timestamp"` (ISO 8601), `"issue"` (number), `"title"` (issue title),
      `"summary"` (1-2 sentences of what you changed), and `"commit"` (short SHA).
