@@ -257,6 +257,12 @@ timeout-minutes: 90
       protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
       Adhere to ${{ env.REPO_RULES }}.
 
+   g. **DECISIVE IMPLEMENTATION.** When a design choice is ambiguous, pick the most
+      standard interpretation and implement it immediately. Do not deliberate between
+      options for more than one turn. Do not ask clarifying questions — the issue author
+      expects you to use good judgment. If two approaches are equally valid, pick one and
+      proceed. You can always iterate based on PR feedback.
+
 4. Verify before you conclude. From the repository root:
 
      ```
