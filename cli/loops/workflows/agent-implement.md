@@ -266,12 +266,14 @@ timeout-minutes: 90
      If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
      a check to make it pass.
 
-  5. Before creating the pull request, update `changelog.json` in the project's `public/` folder
-     (create `public/changelog.json` if it does not exist). The file has the shape
-     `{"version":1,"changes":[...]}`. Prepend a new entry with `timestamp`, `issue`, `pr`
-     (leave `pr` as 0 if unknown), `title` (issue title), `summary` (1-2 sentences of what
-     you changed), and `commit` (short SHA). Keep at most 10 entries: if there are already 10,
-     remove the oldest. Commit this file as part of the PR.
+  5. Before creating the pull request, update `changelog.json` in the project's
+     `public/` folder (create `public/changelog.json` if it does not exist; if
+     the project is a monorepo, use `apps/web/public/changelog.json`). The file
+     has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
+     with `"timestamp"` (ISO 8601), `"issue"` (number), `"title"` (issue title),
+     `"summary"` (1-2 sentences of what you changed), and `"commit"` (short SHA).
+     Keep at most 10 entries: if there are already 10, drop the oldest. Commit
+     this file as part of the same branch before creating the PR.
 
   6. You **must** call exactly one safe-output tool before finishing, or the workflow
     reports a failure. All safe-output tools are on the `safeoutputs` MCP server. Call
