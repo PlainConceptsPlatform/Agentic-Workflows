@@ -66,6 +66,10 @@ classify_route() {
               elif [ "${LABEL:-}" = "direct" ]; then
                 direct_mode="first"
               fi
+            elif has_label bot-working; then
+              # Already has bot-working - the workflow is already running or queued.
+              # Don't re-trigger.
+              error="issue already has bot-working label; implement/refine/direct already in progress"
             else
               error="waiting for bot to add bot-working label"
             fi
