@@ -39,7 +39,9 @@ for (const file of readdirSync(workflowDirectory)) {
     .replaceAll("opencode run --print-logs --log-level ERROR", "opencode run --port 4096 --log-level ERROR")
     .replaceAll("opencode run --log-level ERROR", "opencode run --port 4096 --log-level ERROR")
     .replaceAll("--log-level DEBUG", "--log-level ERROR")
-    .replace(/GH_AW_INFO_MODEL_COSTS: '[^']*'/g, "GH_AW_INFO_MODEL_COSTS: '{\"providers\":{}}'");
+    .replace(/GH_AW_INFO_MODEL: "[^"]*"/g, 'GH_AW_INFO_MODEL: "per-agent"')
+    .replace(/OPENCODE_MODEL: [^\n]+/g, "OPENCODE_MODEL: ''")
+    .replace(/GH_AW_INFO_MODEL_COSTS: '[^']*'/g, 'GH_AW_INFO_MODEL_COSTS: \'{"providers":{}}\'');
 
   if (patched !== content) writeFileSync(path, patched);
 }
