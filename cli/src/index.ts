@@ -3,7 +3,7 @@
 import { inspectRepository, parseVisibility, resolveVisibility } from "./repository-inspection.js";
 import { installCatalog, installTemplate, isTemplateName } from "./catalog-installation.js";
 import { formatCatalog, listCatalog, searchCatalog } from "./catalog-listing.js";
-import { routeNames, type RouteName, type TemplateName } from "./workflow-catalog.js";
+import { routeNames, templateNames, type RouteName, type TemplateName } from "./workflow-catalog.js";
 import { runInteractive } from "./tui.js";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -140,7 +140,7 @@ type ParsedAddOptions =
   | { kind: "ok"; routes: readonly RouteName[]; template: TemplateName | undefined; force: boolean }
   | { kind: "invalid"; message: string };
 
-const TEMPLATE_NAMES = "agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|opencode.ci.json";
+const TEMPLATE_NAMES = templateNames.join("|");
 
 function parseAddOptions(options: readonly string[]): ParsedAddOptions {
   const routes: RouteName[] = [];

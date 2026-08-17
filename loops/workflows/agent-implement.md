@@ -244,20 +244,25 @@ timeout-minutes: 90
       `ob-ops-evidence`) and owns its procedure. You must not skip a phase unless the
       pipeline's refined-issue detection says to.
 
-   d. The `apply` phase uses `ob-plan-apply` which delegates implementation to specialist
-      subagent waves. Let it own worker resolution, concurrency, and retry , do not
-      implement the tasks yourself unless `ob-plan-apply` instructs you to.
+    d. The `apply` phase uses `ob-plan-apply` which delegates implementation to specialist
+       subagent waves. Let it own worker resolution, concurrency, and retry , do not
+       implement the tasks yourself unless `ob-plan-apply` instructs you to.
 
-   e. Implement only what the issue asks for: a vague sentence is not licence to redesign
-      a module. Never read outside this repository root. The issue context at
-      `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria that the pipeline must
-      satisfy.
+    e. **Evidence phase:** The agent sandbox cannot run Docker or headless Chromium.
+       `ob-ops-evidence` writes a `capturePlan` in `evidence.json` instead of capturing
+       screenshots. A separate "Visual evidence" CI workflow runs the capturePlan on a
+       runner with full access. Do not attempt workarounds — write the capturePlan and move on.
 
-   f. Follow repository documentation and established conventions. Keep changes focused,
-      protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
-      Adhere to ${{ env.REPO_RULES }}.
+    f. Implement only what the issue asks for: a vague sentence is not licence to redesign
+       a module. Never read outside this repository root. The issue context at
+       `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria that the pipeline must
+       satisfy.
 
-   g. **DECISIVE IMPLEMENTATION.** When a design choice is ambiguous, pick the most
+    g. Follow repository documentation and established conventions. Keep changes focused,
+       protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
+       Adhere to ${{ env.REPO_RULES }}.
+
+    h. **DECISIVE IMPLEMENTATION.** When a design choice is ambiguous, pick the most
       standard interpretation and implement it immediately. Do not deliberate between
       options for more than one turn. Do not ask clarifying questions — the issue author
       expects you to use good judgment. If two approaches are equally valid, pick one and

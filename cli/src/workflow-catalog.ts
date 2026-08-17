@@ -59,6 +59,7 @@ export const templateNames = [
   "app-ci-node-monorepo",
   "github-release",
   "opencode.ci.json",
+  "visual-evidence",
 ] as const;
 
 export type TemplateName = (typeof templateNames)[number];
@@ -76,4 +77,5 @@ export const catalogTemplates: readonly CatalogTemplate[] = [
   { name: "app-ci-node-monorepo", file: "app-ci-node-monorepo.yml", description: "App CI pipeline for a Node monorepo: build, test, and lint on PRs and schedule." },
   { name: "github-release", file: "github-release.yml", description: "Publishes or updates a GitHub Release with generated notes whenever a v* tag is pushed." },
   { name: "opencode.ci.json", file: "opencode.ci.json", description: "Standalone OpenCode CI config: plainconcepts provider, GLM model registration, ci-workflow-agent, and LSP defaults for consumer repositories." },
+  { name: "visual-evidence", file: "visual-evidence.yml", description: "Visual evidence: captures screenshots of UI changes on bot-authored PRs by reading the capturePlan left by the agent in evidence.json and executing it on a runner with Docker and Chrome access." },
 ];
