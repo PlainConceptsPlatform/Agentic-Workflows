@@ -10,6 +10,7 @@ env:
   REFINE_MARKER: "<!-- agent-refine -->"
   INITIAL_MODE: first
   RESPONSE_MODE: rerefine
+  MAX_SELF_QUESTIONS: "5"
   INCOMPLETE_COMMENT: "Automated refinement ended without an outcome. The refine label remains for a retry."
   SAFE_OUTPUT_COMMENT_PREFIX: "Refinement update"
   ISSUE_CONTEXT_PATH: /tmp/gh-aw/agent/issue-context.json
@@ -23,6 +24,10 @@ env:
 description: |
   Refines an issue into a user story, on a first pass or after the author has answered the
   bot's questions. Replaces .loops/recipes/refine-loop.yaml.
+
+  Before writing the story, the agent explores the codebase per work unit (each bullet in a
+  bullet-list issue is its own unit), answering its own questions where the code can and
+  escalating only genuine business decisions to the author.
 
   Each issue refines independently. `bot-working` prevents double-processing: the reserve
   job adds it, the agent or finalization removes it, and a crashed run's leftover marker
@@ -234,9 +239,9 @@ engine:
     - "plainconcepts/glm-5-2"
 
 model: openai/glm-5-2
-max-turns: 300
-max-turn-cache-misses: 3000
-max-ai-credits: 5000
+max-turns: 500
+max-turn-cache-misses: 4000
+max-ai-credits: 8000
 
 permissions: read-all
 
@@ -256,7 +261,7 @@ safe-outputs:
   add-comment:
 
 
-timeout-minutes: 30
+timeout-minutes: 40
 ---
 
 1. You are refining the triggering issue **#${{ inputs.issue-number }}**. Do not choose
@@ -270,31 +275,56 @@ timeout-minutes: 30
    - On a `${{ env.RESPONSE_MODE }}` pass, incorporate only the supplied answers from the issue author or an
      assignee. Do not use answers from other commenters.
 
-3. Call skill("ob-plan-story"), then run `/plan-story` for the issue. Ground the story in the actual
-   codebase by reading the relevant files. Never read outside this repository root. Write it as
-   a user story in Mike Cohn's As a / I want to / so that form, with
+3. Explore before you write. Call skill("ob-plan-explore") and hold its stance for this step:
+   read-only, no plans, no files, no branches. You are only building understanding here, never
+   producing artifacts.
+
+   Split the issue into work units first. If the issue body is a bullet list of distinct tasks
+   (for example "- check the button component", "- then check the login", "- then suggest a
+   register page"), treat each bullet as its own work unit. Otherwise treat the whole issue as a
+   single work unit.
+
+   For each work unit, in order:
+   - Explore the relevant code and repository documentation, and raise the concrete questions you
+     must answer to refine it well.
+   - Keep exploring to answer those questions yourself from the codebase and the docs.
+   - Only when a question is a genuine business or product decision that the code cannot answer,
+     set it aside as a question for the author.
+
+   Explore more deeply than a single pass, but never without end. Ask yourself at most
+   ${{ env.MAX_SELF_QUESTIONS }} questions per work unit, and stop once further exploration no
+   longer changes your understanding. This exploration is internal working: never write your
+   self-asked questions or their answers to the issue.
+
+4. Call skill("ob-plan-story"), then run `/plan-story` for the issue, passing everything you
+   learned while exploring as the exploration findings. Ground the story in the actual
+   codebase by reading the relevant files. Never read outside this repository root. When the
+   issue held several work units, combine them into a single user story that covers all of them.
+   Write it as a user story in Mike Cohn's As a / I want to / so that form, with
    Given/When/Then acceptance criteria, the edge cases, and a Mermaid diagram where one
    genuinely helps.
 
      Apply repository documentation and established conventions before finalizing the story.
      Adhere to ${{ env.REPO_RULES }}.
 
- 4. Load `@humanizer` and prepare the complete replacement issue body as valid Markdown.
+5. Load `@humanizer` and prepare the complete replacement issue body as valid Markdown.
 
-5. Decide exactly one outcome:
+6. Decide exactly one outcome:
 
     Labels are workflow-owned state. Do not call `add_labels` or `remove_labels`.
 
-    **Questions remain.** Leave the body unchanged. Call `add_comment` once with:
+    **Questions remain.** You set aside one or more questions for the author that the codebase
+    could not answer. Leave the body unchanged. Call `add_comment` once with:
    1. `${{ env.REFINE_MARKER }}`
    2. `${{ env.SAFE_OUTPUT_COMMENT_PREFIX }}`
    3. `I have some questions about this issue. Please reply in one comment and I'll process your answers.`
-   4. Every clarification question immediately below it, each answerable in a sentence.
+   4. Every set-aside question, gathered from all work units, immediately below it, each answerable in a sentence.
 
    Write the questions in **plain business language, not technical jargon**. The person reading
    them is a domain expert, not an engineer.
 
-    **The story is complete.** Call `update_issue` with the replacement body and `add_comment`
+    **The story is complete.** You answered every exploration question yourself and none remain
+    for the author. Call `update_issue` with the replacement body and `add_comment`
     with `${{ env.REFINE_MARKER }}`, then `${{ env.SAFE_OUTPUT_COMMENT_PREFIX }}`,
     then exactly one of these messages, based only on the `labels` array in the supplied issue
     context:
@@ -310,7 +340,8 @@ flowchart TD
     refPick{"Issue eligible?"} -->|yes| refReserve
     refPick -.->|no| refIdle
     refReserve("Reserve<br/>bot-working") --> refFacts
-    refFacts("Facts<br/>Issue and comments to disk") --> refStory
+    refFacts("Facts<br/>Issue and comments to disk") --> refExplore
+    refExplore("Explore<br/>ob-plan-explore per work unit,<br/>self-answer, bounded") --> refStory
     refStory("Story<br/>/plan-story, grounded in the code") -->|✓| refProse
     refStory -.->|✗| refFail
     refProse("Prose<br/>@humanizer over the final text") -->|✓| refOutcome
@@ -330,7 +361,7 @@ flowchart TD
     classDef success fill:#e8f8ec,stroke:#18883c,stroke-width:2px,color:#145a32
 
     class refStart start
-    class refReserve,refFacts,refStory,refProse action
+    class refReserve,refFacts,refExplore,refStory,refProse action
     class refPick,refOutcome decision
     class refIdle idle
     class refFail failure
