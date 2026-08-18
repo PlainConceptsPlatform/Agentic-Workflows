@@ -277,14 +277,21 @@ timeout-minutes: 90
      If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
      a check to make it pass.
 
-  5. Before creating the pull request, update `changelog.json` in the project's
-     `src/shared/data/` folder (create `src/shared/data/changelog.json` if it does not
-     exist; in a monorepo use `apps/web/src/shared/data/changelog.json`). The file
-     has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
-     with `"timestamp"` (ISO 8601), `"issue"` (number), `"title"` (issue title),
-     `"summary"` (1-2 sentences of what you changed), and `"commit"` (short SHA).
-     Keep at most 10 entries: if there are already 10, drop the oldest. Commit
-     this file as part of the same branch before creating the PR.
+   5. Before creating the pull request, update `changelog.json` in the project's
+      `src/shared/data/` folder (create `src/shared/data/changelog.json` if it does not
+      exist; in a monorepo use `apps/web/src/shared/data/changelog.json`). The file
+      has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
+      with `"timestamp"` (ISO 8601), `"issue"` (number), `"title"` (issue title),
+      `"summary"` (1-2 sentences of what you changed), and `"commit"` (short SHA).
+      Keep at most 10 entries: if there are already 10, drop the oldest. Commit
+      this file as part of the same branch before creating the PR.
+
+      The changelog is user-facing. Write the summary for a non-technical reader. Never
+      expose security, auth, or admin internals: no token/session/JWT details, no
+      permission or authorization logic, no audit trail mechanics, no internal method
+      names, no database or migration details. If the work touches these areas, describe
+      the user-visible outcome only (e.g. "Improved session reliability" or "Fixed a data
+      display issue"), not how it was implemented.
 
   6. You **must** call exactly one safe-output tool before finishing, or the workflow
     reports a failure. All safe-output tools are on the `safeoutputs` MCP server. Call
