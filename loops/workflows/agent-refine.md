@@ -284,25 +284,35 @@ timeout-minutes: 40
    register page"), treat each bullet as its own work unit. Otherwise treat the whole issue as a
    single work unit.
 
-   For each work unit, in order:
+   Create a todo entry for each work unit before you start exploring. Process them one at a
+   time, strictly sequentially: explore unit 1, self-answer its questions, mark the todo
+   complete, then move to unit 2. Do not explore multiple work units in the same pass. Do not
+   start unit N+1 until unit N is marked complete.
+
+   For the current work unit only:
    - Explore the relevant code and repository documentation, and raise the concrete questions you
      must answer to refine it well.
    - Keep exploring to answer those questions yourself from the codebase and the docs.
    - Only when a question is a genuine business or product decision that the code cannot answer,
      set it aside as a question for the author.
+   - Mark the unit's todo complete only when your findings are concrete enough to write
+     acceptance criteria for this unit. If you explored a file but cannot describe what changes
+     for this unit, you are not done — keep exploring or set aside a question.
 
    Explore more deeply than a single pass, but never without end. Ask yourself at most
    ${{ env.MAX_SELF_QUESTIONS }} questions per work unit, and stop once further exploration no
    longer changes your understanding. This exploration is internal working: never write your
    self-asked questions or their answers to the issue.
 
-4. Call skill("ob-plan-story"), then run `/plan-story` for the issue, passing everything you
-   learned while exploring as the exploration findings. Ground the story in the actual
-   codebase by reading the relevant files. Never read outside this repository root. When the
-   issue held several work units, combine them into a single user story that covers all of them.
-   Write it as a user story in Mike Cohn's As a / I want to / so that form, with
-   Given/When/Then acceptance criteria, the edge cases, and a Mermaid diagram where one
-   genuinely helps.
+4. Before writing the story, verify coverage: list every work unit and confirm each one has
+   exploration findings concrete enough for acceptance criteria. If any unit is missing, go back
+   and explore it now. Then call skill("ob-plan-story") and run `/plan-story` for the issue,
+   passing everything you learned while exploring as the exploration findings. Ground the story
+   in the actual codebase by reading the relevant files. Never read outside this repository root.
+   When the issue held several work units, combine them into a single user story that covers all
+   of them. Write at least one Given/When/Then acceptance scenario per work unit. Write it as a
+   user story in Mike Cohn's As a / I want to / so that form, with Given/When/Then acceptance
+   criteria, the edge cases, and a Mermaid diagram where one genuinely helps.
 
      Apply repository documentation and established conventions before finalizing the story.
      Adhere to ${{ env.REPO_RULES }}.
