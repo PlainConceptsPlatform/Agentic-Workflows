@@ -32,14 +32,26 @@ For automation or scripting, non-interactive commands are available:
 ```bash
 npx @plainconceptsplatform/workflows@latest init
 npx @plainconceptsplatform/workflows@latest add
+npx @plainconceptsplatform/workflows@latest add refine implement
 npx @plainconceptsplatform/workflows@latest add --template agentics-checks
 npx @plainconceptsplatform/workflows@latest add --template agentics-maintenance
 npx @plainconceptsplatform/workflows@latest add --template app-ci-dotnet-next
 npx @plainconceptsplatform/workflows@latest add --template app-ci-node-monorepo
+npx @plainconceptsplatform/workflows@latest remove propose
 npx @plainconceptsplatform/workflows@latest update
 ```
 
 `add` (catalog install) always installs `opencode.ci.json` and `scripts/compile-agent-workflows.mjs` alongside managed loop files. They are mandatory.
+
+## Changing the installed route set
+
+The router (`work-router.yml`), classifier, and route matrix are derived files: their content is a function of which routes are installed. The CLI owns that assembly so the router always references exactly the workers on disk, never more.
+
+- `add <routes>` unions the requested routes with the routes already installed, then regenerates the router, classifier, and route matrix from the union. Adding a route later keeps the ones already there instead of dropping them.
+- `remove <routes>` drops the requested routes from that set, regenerates the same derived files, and deletes each removed worker's `agent-<route>.md` and generated `agent-<route>.lock.yml`.
+- The interactive TUI is desired-state: the checked routes are the target set. Checking a new route adds it; unchecking an installed route removes it.
+
+Changing the route set rewrites the package-owned router, so these operations report a conflict on `work-router.yml` unless you pass `--force`. Standalone worker `.md` files keep their own conflict protection and their consumer `env:` edits are preserved across regeneration.
 
 For a project-local development dependency, install `@plainconceptsplatform/workflows` and run `pnpm exec workflows` with no arguments to launch the TUI, or `pnpm exec workflows <init|add|update>` for non-interactive use.
 

@@ -205,6 +205,36 @@ export async function installMandatoryFiles(
   return { installed: files.map((file) => file.target), conflicts };
 }
 
+export async function installedRoutes(repositoryPath: string): Promise<RouteName[]> {
+  const found = await Promise.all(
+    workflowRoutes.map(async (route): Promise<RouteName | undefined> =>
+      (await exists(join(repositoryPath, ".github", "workflows", route.worker))) ? route.name : undefined,
+    ),
+  );
+  return found.filter((name): name is RouteName => name !== undefined);
+}
+
+export async function removeRouteFiles(
+  repositoryPath: string,
+  routes: readonly RouteName[],
+): Promise<string[]> {
+  const workerByRoute = new Map(workflowRoutes.map((route) => [route.name, route.worker]));
+  const removed: string[] = [];
+  for (const route of routes) {
+    const worker = workerByRoute.get(route);
+    if (worker === undefined) continue;
+    const lock = worker.replace(/\.md$/, ".lock.yml");
+    for (const file of [worker, lock]) {
+      const destination = join(repositoryPath, ".github", "workflows", file);
+      if (await exists(destination)) {
+        await rm(destination, { force: true });
+        removed.push(`.github/workflows/${file}`);
+      }
+    }
+  }
+  return removed.sort();
+}
+
 export function isTemplateName(value: string): value is TemplateName {
   return templateNames.includes(value as TemplateName);
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { inspectRepository, parseVisibility, resolveVisibility } from "./repository-inspection.js";
-import { installCatalog, installTemplate, isTemplateName } from "./catalog-installation.js";
+import { installCatalog, installedRoutes, installTemplate, isTemplateName, removeRouteFiles } from "./catalog-installation.js";
 import { formatCatalog, listCatalog, searchCatalog } from "./catalog-listing.js";
 import { routeNames, templateNames, type RouteName, type TemplateName } from "./workflow-catalog.js";
 import { runInteractive } from "./tui.js";
@@ -23,6 +23,7 @@ Commands:
   (default)                                   Launch the interactive TUI for selecting and installing items.
   init                                        Inspect the repository and report its stack and visibility.
   add [routes] [--template <name>] [--force]  Install route workers, a template, or mandatory files.
+  remove <routes> [--force]                   Uninstall route workers and regenerate the router without them.
   update                                      Alias for add.
   status                                      Print repository inspection as JSON.
   list                                        List all available workflows and templates with install status.
@@ -37,6 +38,12 @@ Route names (positional arguments to add):
   add --template agentics-checks             Installs the named template only (no mandatory files).
   add refine --template agentics-checks      Installs routes + mandatory + the named template.
   add refine implement --force               Forces re-install of routes plus mandatory, overwriting.
+  remove propose                             Uninstalls the propose worker and drops it from the router.
+
+add and remove keep the router consistent with what is installed: add unions the requested
+routes with the routes already present, and remove drops the requested routes from that set.
+Both regenerate the router, classifier, and route matrix from the resulting set. Changing the
+route set rewrites the package-owned router, so pass --force to overwrite it.
 
 Options:
   --visibility public|private                 Override repository visibility (init only).
@@ -104,7 +111,8 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
     const allInstalled: string[] = [];
 
     if (routes.length > 0) {
-      const result = await installCatalog(repositoryPath, { force, selectedRoutes: routes, inspection });
+      const selectedRoutes = unionRoutes(routes, await installedRoutes(repositoryPath));
+      const result = await installCatalog(repositoryPath, { force, selectedRoutes, inspection });
       allConflicts.push(...result.conflicts);
       allInstalled.push(...result.installed);
     } else if (template === undefined) {
@@ -127,7 +135,36 @@ export async function run(arguments_: readonly string[], repositoryPath = proces
     return 0;
   }
 
+  if (command === "remove") {
+    const parsed = parseAddOptions(options);
+    if (parsed.kind === "invalid") return fail(parsed.message);
+    if (parsed.template !== undefined) return fail("remove does not accept --template.");
+    if (parsed.routes.length === 0) return fail("remove requires at least one route.");
+
+    const inspection = await inspectRepository(repositoryPath);
+    const installed = await installedRoutes(repositoryPath);
+    const desiredRoutes = installed.filter((route) => !parsed.routes.includes(route));
+
+    const result = await installCatalog(repositoryPath, { force: parsed.force, selectedRoutes: desiredRoutes, inspection });
+    if (result.conflicts.length > 0 && !parsed.force) {
+      console.error(`Catalog conflicts found. Re-run with --force to overwrite package-managed files:\n${result.conflicts.join("\n")}`);
+      return 1;
+    }
+
+    const removed = await removeRouteFiles(repositoryPath, parsed.routes);
+    console.log(JSON.stringify({ command, installed: [...result.installed].sort(), removed, conflicts: result.conflicts }, null, 2));
+    return 0;
+  }
+
   return fail(`Unknown command: ${command}`);
+}
+
+function unionRoutes(requested: readonly RouteName[], installed: readonly RouteName[]): RouteName[] {
+  const result = [...requested];
+  for (const route of installed) {
+    if (!result.includes(route)) result.push(route);
+  }
+  return result;
 }
 
 function readVisibilityOption(options: readonly string[]): "invalid" | "public" | "private" | undefined {

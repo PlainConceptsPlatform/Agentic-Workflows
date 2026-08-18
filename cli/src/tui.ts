@@ -1,7 +1,7 @@
 import * as readline from "node:readline";
 
 import { formatCatalog, listCatalog, type CatalogEntry } from "./catalog-listing.js";
-import { installCatalog, installMandatoryFiles, installTemplate, isTemplateName } from "./catalog-installation.js";
+import { installCatalog, installMandatoryFiles, installTemplate, isTemplateName, removeRouteFiles } from "./catalog-installation.js";
 import { inspectRepository } from "./repository-inspection.js";
 import { routeNames, type RouteName } from "./workflow-catalog.js";
 
@@ -284,27 +284,40 @@ async function installSelected(
   force: boolean,
 ): Promise<number> {
   const items = getItemsToInstall(state, force);
-
-  const routes = items.filter((entry) => entry.kind === "route");
+  const newRoutes = items.filter((entry) => entry.kind === "route");
   const templates = items.filter((entry) => entry.kind === "template");
+
+  const routeEntries = state.allItems.filter((entry) => entry.kind === "route");
+  const checkedRoutes = routeEntries
+    .filter((entry) => state.selected.has(entry.name))
+    .map((entry) => entry.name)
+    .filter((name): name is RouteName => routeNames.includes(name as RouteName));
+  const installedRouteNames = routeEntries
+    .filter((entry) => entry.installed)
+    .map((entry) => entry.name)
+    .filter((name): name is RouteName => routeNames.includes(name as RouteName));
+  const removedRoutes = installedRouteNames.filter((name) => !checkedRoutes.includes(name));
 
   const allConflicts: string[] = [];
   const allInstalled: string[] = [];
-
-  const selectedRouteNames = routes.length > 0
-    ? routes.map((entry) => entry.name).filter((name): name is RouteName => routeNames.includes(name as RouteName))
-    : [...routeNames];
+  const allRemoved: string[] = [];
 
   const inspection = await inspectRepository(repositoryPath);
 
-  if (routes.length > 0) {
-    const result = await installCatalog(repositoryPath, {
-      force,
-      selectedRoutes: selectedRouteNames,
-      inspection,
-    });
+  if (checkedRoutes.length > 0 && (newRoutes.length > 0 || removedRoutes.length > 0 || force)) {
+    const result = await installCatalog(repositoryPath, { force, selectedRoutes: checkedRoutes, inspection });
     allConflicts.push(...result.conflicts);
     allInstalled.push(...result.installed);
+    if (result.conflicts.length === 0 || force) {
+      allRemoved.push(...await removeRouteFiles(repositoryPath, removedRoutes));
+    }
+  } else if (checkedRoutes.length === 0 && removedRoutes.length > 0) {
+    const result = await installCatalog(repositoryPath, { force, selectedRoutes: [], inspection });
+    allConflicts.push(...result.conflicts);
+    allInstalled.push(...result.installed);
+    if (result.conflicts.length === 0 || force) {
+      allRemoved.push(...await removeRouteFiles(repositoryPath, removedRoutes));
+    }
   } else {
     const result = await installMandatoryFiles(repositoryPath, { force });
     allConflicts.push(...result.conflicts);
@@ -323,10 +336,18 @@ async function installSelected(
     return 1;
   }
 
-  if (allInstalled.length > 0) {
-    console.log(`Installed ${allInstalled.length} item(s):`);
-    for (const file of allInstalled) {
-      console.log(`  ${file}`);
+  if (allInstalled.length > 0 || allRemoved.length > 0) {
+    if (allInstalled.length > 0) {
+      console.log(`Installed ${allInstalled.length} item(s):`);
+      for (const file of allInstalled) {
+        console.log(`  ${file}`);
+      }
+    }
+    if (allRemoved.length > 0) {
+      console.log(`Removed ${allRemoved.length} item(s):`);
+      for (const file of allRemoved) {
+        console.log(`  ${file}`);
+      }
     }
   } else {
     console.log("All selected items are already installed.");

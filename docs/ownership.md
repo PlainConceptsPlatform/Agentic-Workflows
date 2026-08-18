@@ -18,6 +18,12 @@ Each worker declares `OPENAI_BASE_URL: https://forge.plainconcepts.com/v1` by de
 
 Generated `*.lock.yml` files and `.github/aw/actions-lock.json` belong only in consumer repositories. Consumers regenerate them with supplied compile script.
 
+## Route set and the derived router
+
+The router (`work-router.yml`), the classifier (`classify-route/classify-route.sh`), and the route matrix (`verify-route-matrix/verify-route-matrix.sh`) are derived files: their content is assembled from the set of installed routes, not authored per consumer. The CLI owns that assembly so the router references exactly the workers present on disk.
+
+`add <routes>` unions the requested routes with the routes already installed; `remove <routes>` drops the requested routes from that set. Both regenerate the three derived files from the resulting set. `remove` also deletes each removed route's `agent-<route>.md` and its generated `agent-<route>.lock.yml`. The interactive TUI is desired-state: the checked routes are the target set, so checking adds a route and unchecking removes it. Because changing the route set rewrites the package-owned router, these operations require `--force` to overwrite it; standalone worker frontmatter edits are still preserved across regeneration.
+
 ## Consumer prerequisite
 
 Before installing or compiling workflows, consumers should install and configure `PlainConceptsPlatform/opencode-onboard`. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available in the consumer repository before compiling.

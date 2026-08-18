@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { catalogSourcePath, ensurePreCommitHook, installCatalog, installMandatoryFiles, installTemplate } from "./catalog-installation.js";
+import { catalogSourcePath, ensurePreCommitHook, installCatalog, installedRoutes, installMandatoryFiles, installTemplate, removeRouteFiles } from "./catalog-installation.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -449,6 +449,44 @@ describe("catalog installation", () => {
     await expect(installTemplate(repositoryPath, "agentics-checks", { force: true, sourcePath })).resolves.toMatchObject({
       installed: [".github/workflows/agentics-checks.yml"],
     });
+  });
+});
+
+describe("route lifecycle", () => {
+  it("detects installed route workers in workflowRoutes order", async () => {
+    const repositoryPath = await createDirectory({
+      ".github/workflows/agent-implement.md": "# Implement\n",
+      ".github/workflows/agent-refine.md": "# Refine\n",
+    });
+
+    await expect(installedRoutes(repositoryPath)).resolves.toEqual(["refine", "implement"]);
+  });
+
+  it("returns an empty list when no route workers are installed", async () => {
+    const repositoryPath = await createDirectory({});
+
+    await expect(installedRoutes(repositoryPath)).resolves.toEqual([]);
+  });
+
+  it("removes a route worker and its generated lock, leaving other workers", async () => {
+    const repositoryPath = await createDirectory({
+      ".github/workflows/agent-refine.md": "# Refine\n",
+      ".github/workflows/agent-refine.lock.yml": "generated\n",
+      ".github/workflows/agent-implement.md": "# Implement\n",
+    });
+
+    await expect(removeRouteFiles(repositoryPath, ["refine"])).resolves.toEqual([
+      ".github/workflows/agent-refine.lock.yml",
+      ".github/workflows/agent-refine.md",
+    ]);
+    await expect(readFile(join(repositoryPath, ".github/workflows/agent-refine.md"), "utf8")).rejects.toThrow();
+    await expect(readFile(join(repositoryPath, ".github/workflows/agent-implement.md"), "utf8")).resolves.toBe("# Implement\n");
+  });
+
+  it("ignores routes that are not installed", async () => {
+    const repositoryPath = await createDirectory({});
+
+    await expect(removeRouteFiles(repositoryPath, ["propose"])).resolves.toEqual([]);
   });
 });
 

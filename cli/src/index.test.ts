@@ -305,6 +305,63 @@ describe("workflows CLI", () => {
     expect(error).toHaveBeenCalledWith("Unknown option: --unknown");
     error.mockRestore();
   });
+
+  it("add unions requested routes with already-installed routes", async () => {
+    const { installCatalog } = mockInstallers();
+    const repositoryPath = await createRepository({
+      ".github/workflows/agent-refine.md": "# Refine",
+      ".github/workflows/agent-implement.md": "# Implement",
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["add", "direct"], repositoryPath)).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ selectedRoutes: ["direct", "refine", "implement"] }),
+    );
+    log.mockRestore();
+  });
+
+  it("remove requires at least one route", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["remove"])).resolves.toBe(1);
+    expect(error).toHaveBeenCalledWith("remove requires at least one route.");
+    error.mockRestore();
+  });
+
+  it("remove rejects the --template flag", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(run(["remove", "--template", "agentics-checks"])).resolves.toBe(1);
+    expect(error).toHaveBeenCalledWith("remove does not accept --template.");
+    error.mockRestore();
+  });
+
+  it("remove regenerates the router for the remaining routes and deletes the worker", async () => {
+    const { installCatalog } = mockInstallers();
+    const repositoryPath = await createRepository({
+      ".github/workflows/agent-refine.md": "# Refine",
+      ".github/workflows/agent-refine.lock.yml": "generated",
+      ".github/workflows/agent-implement.md": "# Implement",
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(run(["remove", "refine", "--force"], repositoryPath)).resolves.toBe(0);
+
+    expect(installCatalog).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ force: true, selectedRoutes: ["implement"] }),
+    );
+
+    const { access } = await import("node:fs/promises");
+    const { constants } = await import("node:fs");
+    await expect(access(join(repositoryPath, ".github/workflows/agent-refine.md"), constants.F_OK)).rejects.toThrow();
+    await expect(access(join(repositoryPath, ".github/workflows/agent-refine.lock.yml"), constants.F_OK)).rejects.toThrow();
+    await expect(access(join(repositoryPath, ".github/workflows/agent-implement.md"), constants.F_OK)).resolves.toBeUndefined();
+    log.mockRestore();
+  });
 });
 
 async function createRepository(files: Record<string, string>): Promise<string> {
