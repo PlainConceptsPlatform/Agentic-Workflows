@@ -244,20 +244,25 @@ timeout-minutes: 90
       `ob-ops-evidence`) and owns its procedure. You must not skip a phase unless the
       pipeline's refined-issue detection says to.
 
-   d. The `apply` phase uses `ob-plan-apply` which delegates implementation to specialist
-      subagent waves. Let it own worker resolution, concurrency, and retry , do not
-      implement the tasks yourself unless `ob-plan-apply` instructs you to.
+    d. The `apply` phase uses `ob-plan-apply` which delegates implementation to specialist
+       subagent waves. Let it own worker resolution, concurrency, and retry , do not
+       implement the tasks yourself unless `ob-plan-apply` instructs you to.
 
-   e. Implement only what the issue asks for: a vague sentence is not licence to redesign
-      a module. Never read outside this repository root. The issue context at
-      `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria that the pipeline must
-      satisfy.
+    e. **Evidence phase:** The agent sandbox cannot run Docker or headless Chromium.
+       `ob-ops-evidence` writes a `capturePlan` in `evidence.json` instead of capturing
+       screenshots. A separate "Visual evidence" CI workflow runs the capturePlan on a
+       runner with full access. Do not attempt workarounds — write the capturePlan and move on.
 
-   f. Follow repository documentation and established conventions. Keep changes focused,
-      protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
-      Adhere to ${{ env.REPO_RULES }}.
+    f. Implement only what the issue asks for: a vague sentence is not licence to redesign
+       a module. Never read outside this repository root. The issue context at
+       `${{ env.ISSUE_CONTEXT_PATH }}` defines acceptance criteria that the pipeline must
+       satisfy.
 
-   g. **DECISIVE IMPLEMENTATION.** When a design choice is ambiguous, pick the most
+    g. Follow repository documentation and established conventions. Keep changes focused,
+       protect secrets, do not bypass checks, and do not modify generated files unless the issue requires it.
+       Adhere to ${{ env.REPO_RULES }}.
+
+    h. **DECISIVE IMPLEMENTATION.** When a design choice is ambiguous, pick the most
       standard interpretation and implement it immediately. Do not deliberate between
       options for more than one turn. Do not ask clarifying questions — the issue author
       expects you to use good judgment. If two approaches are equally valid, pick one and
@@ -272,14 +277,35 @@ timeout-minutes: 90
      If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
      a check to make it pass.
 
-  5. Before creating the pull request, update `changelog.json` in the project's
-     `src/shared/data/` folder (create `src/shared/data/changelog.json` if it does not
-     exist; in a monorepo use `apps/web/src/shared/data/changelog.json`). The file
-     has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
-     with `"timestamp"` (ISO 8601), `"issue"` (number), `"title"` (issue title),
-     `"summary"` (1-2 sentences of what you changed), and `"commit"` (short SHA).
-     Keep at most 10 entries: if there are already 10, drop the oldest. Commit
-     this file as part of the same branch before creating the PR.
+   5. Before creating the pull request, check whether an open bot pull request already
+      exists that closes #${{ inputs.issue-number }}. Run:
+
+      ```
+      gh pr list --repo "$GITHUB_REPOSITORY" --state open --search "is:pr linked:issue ${{ inputs.issue-number }}" --json number,headRefName,author --jq '[.[] | select(.author.login | test("[bot]$"))] | if length > 0 then .[0] else empty end'
+      ```
+
+      If a PR already exists, do **not** create a new branch or PR. Push your changes to
+      the existing PR's branch (`headRefName`) instead, then call
+      `safeoutputs/push_to_pull_request_branch` rather than `safeoutputs/create_pull_request`.
+      This prevents duplicate PRs when a retry is triggered after a merge-gate failure.
+
+      If no existing PR is found, proceed to create a new one as described below.
+
+      Before creating the pull request, update `changelog.json` in the project's
+      `src/shared/data/` folder (create `src/shared/data/changelog.json` if it does not
+      exist; in a monorepo use `apps/web/src/shared/data/changelog.json`). The file
+      has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
+      with `"timestamp"` (ISO 8601), `"issue"` (number), `"title"` (issue title),
+      `"summary"` (1-2 sentences of what you changed), and `"commit"` (short SHA).
+      Keep at most 10 entries: if there are already 10, drop the oldest. Commit
+      this file as part of the same branch before creating the PR.
+
+      The changelog is user-facing. Write the summary for a non-technical reader. Never
+      expose security, auth, or admin internals: no token/session/JWT details, no
+      permission or authorization logic, no audit trail mechanics, no internal method
+      names, no database or migration details. If the work touches these areas, describe
+      the user-visible outcome only (e.g. "Improved session reliability" or "Fixed a data
+      display issue"), not how it was implemented.
 
   6. You **must** call exactly one safe-output tool before finishing, or the workflow
     reports a failure. All safe-output tools are on the `safeoutputs` MCP server. Call
@@ -291,11 +317,14 @@ timeout-minutes: 90
 
     Choose exactly one:
 
-     - **`safeoutputs/create_pull_request`** , propose a pull request against `main` with
-       the verified changes. Its `body` must close the issue
-       (`Closes #${{ inputs.issue-number }}`) and summarise what changed and why.
-      This is the normal path.
-    - **`safeoutputs/report_incomplete`** , use only when infrastructure or tooling
+      - **`safeoutputs/create_pull_request`** , propose a pull request against `main` with
+        the verified changes. Its `body` must close the issue
+        (`Closes #${{ inputs.issue-number }}`) and summarise what changed and why.
+        Use this when no open bot PR exists for the issue.
+       This is the normal path.
+      - **`safeoutputs/push_to_pull_request_branch`** , push to an existing PR's branch
+        when step 5 found an open bot PR for this issue. Do not create a duplicate PR.
+      - **`safeoutputs/report_incomplete`** , use only when infrastructure or tooling
       prevents you from completing the task (e.g. the codebase cannot build due to a
       pre-existing error you cannot fix). Provide a specific `reason`.
     - **`safeoutputs/noop`** , use only when the issue context shows the work is already

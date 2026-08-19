@@ -270,7 +270,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ needs.subject.outputs.issue }}
-          labels: ${{ env.WORKING_LABEL }}
+          labels: ${{ env.WORKING_LABEL }},${{ env.IMPLEMENT_LABEL }}
       - name: Flag for human review
         uses: ./.github/actions/add-issue-labels
         with:
@@ -442,8 +442,8 @@ timeout-minutes: 60
    stop looping: `remove_labels` (item_number: ${{ needs.subject.outputs.issue }}) to remove
    `implement` and `bot-working`, `add_labels` (item_number:
    ${{ needs.subject.outputs.issue }}) to add `review`, and `add_comment` (item_number:
-   ${{ needs.subject.outputs.issue }}) with the failure and what you tried. Per #167
-   decision 2, a human decides from there.
+   ${{ needs.subject.outputs.issue }}) with the failure and what you tried. The `implement`
+   label is removed so retries do not create duplicate PRs. A human decides from there.
 
 8. Never merge with administrator privileges and never bypass a required check. If the merge
    is refused, that refusal is the answer: `add_labels` to add `review`

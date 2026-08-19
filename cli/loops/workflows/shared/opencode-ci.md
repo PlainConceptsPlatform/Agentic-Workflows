@@ -139,54 +139,14 @@ pre-agent-steps:
       npm install -g "@fission-ai/openspec@1.8.0"
       openspec --version
 
-  - name: Install playwright-cli (for visual evidence capture)
-    run: |
-      set -euo pipefail
-
-      if command -v playwright-cli > /dev/null 2>&1; then
-        echo "playwright-cli already installed"
-        exit 0
-      fi
-
-      npm install -g @playwright/cli@latest
-      playwright-cli install --browser chromium 2>/dev/null || true
-      playwright-cli --version
-
-  - name: Start SQL Server (persistent database for CI + evidence capture)
-    continue-on-error: true
-    run: |
-      set -euo pipefail
-
-      # Check if SQL Server is already running on the host
-      if command -v sqlcmd > /dev/null 2>&1 && sqlcmd -S localhost,1436 -U sa -P "YourStrong!Passw0rd" -Q "SELECT 1" -C >/dev/null 2>&1; then
-        echo "SQL Server already running on :1436"
-        exit 0
-      fi
-
-      # Check if the project has a docker-compose.yml with SQL Server
-      if [ ! -f docker-compose.yml ]; then
-        echo "No docker-compose.yml found, skipping SQL Server startup"
-        exit 0
-      fi
-
-      echo "Starting SQL Server via docker compose..."
-      export DB_PASSWORD="YourStrong!Passw0rd"
-      
-      # Start SQL Server with persistent volume (data survives between runs)
-      docker compose up -d --wait sqlserver 2>/dev/null || true
-      docker compose up --no-deps init-db 2>/dev/null || true
-
-      # Wait for SQL Server to be ready
-      for i in $(seq 1 30); do
-        if docker exec $(docker compose ps -q sqlserver) /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong!Passw0rd" -Q "SELECT 1" -C >/dev/null 2>&1; then
-          echo "SQL Server is ready on :1436"
-          exit 0
-        fi
-        sleep 2
-      done
-
-      echo "::warning::SQL Server did not become ready in 60s"
-      exit 0
+  # NOTE: playwright-cli and SQL Server startup steps have been removed from the
+  # shared CI baseline. Visual evidence capture now runs in a separate "Visual
+  # evidence" workflow that executes on the raw runner (not inside the awf
+  # sandbox), where Docker and headless Chromium are available. The agent's
+  # /ops-evidence skill writes a capturePlan in evidence.json when blocked;
+  # the Visual Evidence workflow reads and executes it. If you need playwright-cli
+  # or SQL Server inside the agent sandbox for other reasons, add them as
+  # consumer-specific steps after the shared baseline.
 
   - name: Cache NuGet packages
     uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
