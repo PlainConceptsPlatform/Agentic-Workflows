@@ -26,7 +26,7 @@ function makeEntry(name: string, kind: "route" | "template", installed = false):
 }
 
 function makeEntries(installed: string[] = []): CatalogEntry[] {
-  const routes = ["refine", "implement", "direct", "apply-review", "merge-gate", "audit", "propose"];
+  const routes = ["refine", "implement", "direct", "triage", "apply-review", "merge-gate", "audit", "propose"];
   const templates = ["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo", "opencode.ci.json"];
   return [
     ...routes.map((name) => makeEntry(name, "route", installed.includes(name))),
@@ -39,8 +39,8 @@ describe("createSelectionState", () => {
     const entries = makeEntries();
     const state = createSelectionState(entries);
 
-    expect(state.allItems).toHaveLength(12);
-    expect(state.visibleItems).toHaveLength(12);
+    expect(state.allItems).toHaveLength(13);
+    expect(state.visibleItems).toHaveLength(13);
   });
 
   it("pre-selects installed items", () => {
@@ -107,7 +107,7 @@ describe("filterItems", () => {
   const entries = makeEntries();
 
   it("returns all items when filter is empty", () => {
-    expect(filterItems(entries, "")).toHaveLength(12);
+    expect(filterItems(entries, "")).toHaveLength(13);
   });
 
   it("filters by name", () => {
@@ -118,7 +118,7 @@ describe("filterItems", () => {
 
   it("filters by description", () => {
     const result = filterItems(entries, "description");
-    expect(result).toHaveLength(12);
+    expect(result).toHaveLength(13);
   });
 
   it("filters by fuzzy subsequence over name and description", () => {
@@ -173,7 +173,7 @@ describe("clearFilter", () => {
     state = clearFilter(state);
 
     expect(state.filter).toBe("");
-    expect(state.visibleItems).toHaveLength(12);
+    expect(state.visibleItems).toHaveLength(13);
   });
 });
 
@@ -206,7 +206,7 @@ describe("moveCursorUp / moveCursorDown", () => {
   it("wraps cursor to bottom from top", () => {
     const state = moveCursorUp(createSelectionState(makeEntries()));
 
-    expect(state.cursor).toBe(11);
+    expect(state.cursor).toBe(12);
   });
 
   it("does not move when list is empty", () => {
@@ -322,7 +322,7 @@ describe("getItemsToInstall", () => {
   it("includes both routes and templates", () => {
     let state = createSelectionState(makeEntries());
     state = toggleSelection(state);
-    state = { ...state, cursor: 7 };
+    state = { ...state, cursor: 8 };
     state = toggleSelection(state);
 
     const items = getItemsToInstall(state);

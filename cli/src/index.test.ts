@@ -38,7 +38,7 @@ describe("workflows CLI", () => {
     await expect(run(["--help"])).resolves.toBe(0);
 
     const output = log.mock.calls[0]![0] as string;
-    expect(output).toContain("refine, implement, direct, apply-review, merge-gate, audit, propose");
+    expect(output).toContain("refine, implement, direct, triage, apply-review, merge-gate, audit, propose");
     expect(output).toContain("add [routes]");
     log.mockRestore();
   });
@@ -57,7 +57,7 @@ describe("workflows CLI", () => {
 
     await expect(run(["add", "frobnicate"])).resolves.toBe(1);
 
-    expect(error).toHaveBeenCalledWith("Unknown route: frobnicate. Valid routes: refine, implement, direct, apply-review, merge-gate, audit, propose.");
+    expect(error).toHaveBeenCalledWith("Unknown route: frobnicate. Valid routes: refine, implement, direct, triage, apply-review, merge-gate, audit, propose.");
     error.mockRestore();
   });
 
@@ -88,9 +88,9 @@ describe("workflows CLI", () => {
     // None installed: all [ ]
     const installedCount = (output.match(/\[x\]/g) ?? []).length;
     expect(installedCount).toBe(0);
-    // 7 routes + 9 templates = 16 entries
+    // 8 routes + 9 templates = 17 entries
     const uninstalledCount = (output.match(/\[ \]/g) ?? []).length;
-    expect(uninstalledCount).toBe(16);
+    expect(uninstalledCount).toBe(17);
     log.mockRestore();
   });
 
@@ -121,7 +121,7 @@ describe("workflows CLI", () => {
     expect(output).toContain("audit");
     expect(output).not.toContain("Templates:");
     // Only the audit route should be returned — no other route name should appear.
-    const visibleRoutes = ["refine", "implement", "direct", "apply-review", "merge-gate", "propose"];
+    const visibleRoutes = ["refine", "implement", "direct", "triage", "apply-review", "merge-gate", "propose"];
     for (const route of visibleRoutes) {
       expect(output).not.toContain(`${route} —`);
     }
@@ -136,7 +136,7 @@ describe("workflows CLI", () => {
     const output = log.mock.calls[0]![0] as string;
     expect(output).toContain("dotnet-next");
     expect(output).toContain("node-monorepo");
-    expect(output).not.toContain("refine");
+    expect(output).not.toContain("refine —");
     log.mockRestore();
   });
 

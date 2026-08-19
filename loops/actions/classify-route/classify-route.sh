@@ -28,11 +28,18 @@ is_issue_number() {
 classify_route() {
   local route="none" error=""
   local issue_number="" pr_number="" ci_conclusion="" ci_run_id=""
-  local refine_mode="" direct_mode="" trigger_kind=""
+  local refine_mode="" direct_mode="" triage_mode="" trigger_kind=""
 
   case "${EVENT:-}" in
     issues)
-      if [ "${ACTION:-}" = "labeled" ]; then
+      if [ "${ACTION:-}" = "opened" ]; then
+        # Issue opened by an outside collaborator → triage. The authorize job
+        # gates the caller on is_outside_collaborator; this routes unconditionally
+        # so write+ openers classify to triage but the caller job skips them.
+        route="triage"
+        triage_mode="first"
+        issue_number="${EVENT_ISSUE_NUMBER:-}"
+      elif [ "${ACTION:-}" = "labeled" ]; then
         case "${LABEL:-}" in
           bot-working)
             # Bot adds bot-working → route based on which work label is present
@@ -83,6 +90,10 @@ classify_route() {
         pr_number="${EVENT_ISSUE_NUMBER:-}"
       elif [ "${COMMENT_SENDER_TYPE:-}" = "Bot" ]; then
         error="comment authored by a bot"
+      elif has_label triage; then
+        route="triage"
+        triage_mode="retriage"
+        issue_number="${EVENT_ISSUE_NUMBER:-}"
       elif has_label implement; then
         error="issue has implement label; comments do not re-trigger implement"
       elif has_label direct; then
@@ -155,6 +166,15 @@ classify_route() {
             error="operation '${OPERATION}' needs a positive issue-number, got '${INPUT_ISSUE_NUMBER:-}'"
           fi
           ;;
+        triage)
+          if is_issue_number "${INPUT_ISSUE_NUMBER:-}"; then
+            route="triage"
+            issue_number="${INPUT_ISSUE_NUMBER}"
+            triage_mode="${INPUT_MODE:-first}"
+          else
+            error="operation 'triage' needs a positive issue-number, got '${INPUT_ISSUE_NUMBER:-}'"
+          fi
+          ;;
         apply-review)
           if is_issue_number "${INPUT_PR_NUMBER:-}"; then
             route="apply-review"
@@ -199,6 +219,7 @@ ci-conclusion=${ci_conclusion}
 ci-run-id=${ci_run_id}
 refine-mode=${refine_mode}
 direct-mode=${direct_mode}
+triage-mode=${triage_mode}
 trigger-kind=${trigger_kind}
 error=${error}
 EOF

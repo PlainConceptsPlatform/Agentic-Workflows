@@ -31,6 +31,7 @@ on:
           - refine
           - implement
           - direct
+          - triage
           - apply-review
           - merge-gate
           - audit
@@ -53,6 +54,13 @@ jobs:
     needs: [classify, authorize]
     if: needs.classify.outputs.route == 'implement' && needs.authorize.outputs.trusted == 'true'
     uses: ./.github/workflows/agent-implement.lock.yml
+    secrets:
+      OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
+
+  call-triage:
+    needs: [classify, authorize]
+    if: needs.classify.outputs.route == 'triage' && needs.authorize.outputs.is_outside_collaborator == 'true'
+    uses: ./.github/workflows/agent-triage.lock.yml
     secrets:
       OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
 
@@ -144,7 +152,7 @@ const MATRIX_SH = `#!/usr/bin/env bash
 set -euo pipefail
 
 echo "── Router wiring ─────────────────────────────────────────────────────────"
-for route in refine implement direct apply-review merge-gate audit propose bot-approve \\
+for route in refine implement direct triage apply-review merge-gate audit propose bot-approve \\
   audit-close cleanup-artifacts reconcile-bot-pr-runs stale-recovery validate; do
   if grep -q "route == '\${route}'" "\$ROUTER_YML"; then
     PASS=\$((PASS + 1))
@@ -312,7 +320,7 @@ describe("processRoutes", () => {
 
     const matrix = result.get(".github/actions/verify-route-matrix/verify-route-matrix.sh")!;
     expect(matrix).toContain("Route matrix: selected routes valid");
-    expect(matrix).toContain("for route in refine implement direct apply-review merge-gate audit propose");
+    expect(matrix).toContain("for route in refine implement direct triage apply-review merge-gate audit propose");
   });
 
   it("strips propose from all three files when unselected", () => {
@@ -334,7 +342,7 @@ describe("processRoutes", () => {
     expect(classifier).toBe(CLASSIFIER_SH);
 
     const matrix = result.get(".github/actions/verify-route-matrix/verify-route-matrix.sh")!;
-    expect(matrix).toContain("for route in refine implement direct apply-review merge-gate audit");
+    expect(matrix).toContain("for route in refine implement direct triage apply-review merge-gate audit");
     expect(matrix).toContain("for route in propose");
   });
 
@@ -394,7 +402,7 @@ describe("excludedWorkerFiles", () => {
   it("returns all worker files when no routes are selected", () => {
     const excluded = excludedWorkerFiles([]);
 
-    expect(excluded.size).toBe(7);
+    expect(excluded.size).toBe(8);
     expect(excluded.has("agent-refine.md")).toBe(true);
     expect(excluded.has("agent-implement.md")).toBe(true);
     expect(excluded.has("agent-direct.md")).toBe(true);
