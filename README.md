@@ -33,10 +33,13 @@ For automation or scripting, non-interactive commands are available:
 npx @plainconceptsplatform/workflows@latest init
 npx @plainconceptsplatform/workflows@latest add
 npx @plainconceptsplatform/workflows@latest add refine implement
+npx @plainconceptsplatform/workflows@latest add triage
 npx @plainconceptsplatform/workflows@latest add --template agentics-checks
 npx @plainconceptsplatform/workflows@latest add --template agentics-maintenance
 npx @plainconceptsplatform/workflows@latest add --template app-ci-dotnet-next
 npx @plainconceptsplatform/workflows@latest add --template app-ci-node-monorepo
+npx @plainconceptsplatform/workflows@latest add --template bug-report
+npx @plainconceptsplatform/workflows@latest add --template feature-request
 npx @plainconceptsplatform/workflows@latest remove propose
 npx @plainconceptsplatform/workflows@latest update
 ```
@@ -58,6 +61,24 @@ For a project-local development dependency, install `@plainconceptsplatform/work
 Each worker declares its defaults in top-level `env:` frontmatter. Copy consumers edit those
 values directly when their endpoint, model, labels, paths, or baseline verification command differs.
 Every package-managed file includes an ownership header with its `loops/` source path. `update --force` can overwrite consumer edits to these files.
+
+## Triage route for outside collaborators
+
+The `triage` route gates issues opened by outside collaborators (GitHub Read permission / Outside Collaborator role). Write+ users skip triage entirely — they can self-label into the pipeline as usual.
+
+When an outside collaborator opens an issue, the triage agent runs 10 checks (template completeness, security risk, change size, danger level, duplicate detection, clarity, reproducibility, acceptance criteria quality, cross-cutting impact, area suggestion) and loops up to 3 rounds. The author or any write+ user can comment to re-trigger triage after a `needs-info` verdict.
+
+- **pass**: all checks pass → bot adds `refine` label → enters the normal pipeline (refine → implement) with no human in the loop.
+- **needs-info**: needs clarification → bot posts questions, adds `review` label → author or write+ user replies → re-triage.
+- **block**: cannot be done, security risk, or too dangerous → bot adds `blocked` label.
+
+At round 3, `needs-info` is no longer valid — the agent must `pass` or `block`.
+
+Install the triage route alongside other routes:
+
+```bash
+npx @plainconceptsplatform/workflows@latest add triage
+```
 
 ## Optional agentic maintenance templates
 
