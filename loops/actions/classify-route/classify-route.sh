@@ -11,8 +11,7 @@ set -euo pipefail
 readonly AUDIT_CRON="17 1 * * 1"
 readonly AUDIT_CLOSE_CRON="43 3 * * *"
 readonly CLEANUP_ARTIFACTS_CRON="0 6 * * *"
-readonly RECONCILE_BOT_PR_RUNS_CRON="*/15 * * * *"
-readonly STALE_RECOVERY_CRON="0 */2 * * *"
+readonly RECONCILE_BOT_PR_RUNS_CRON="*/30 * * * *"
 # Daily, but it proposes far less often than daily: the worker holds one open
 # proposal at a time and skips while that slot is filled. The cron is a heartbeat,
 # the queue is the pacing.
@@ -136,8 +135,6 @@ classify_route() {
         "$AUDIT_CLOSE_CRON") route="audit-close" ;;
         "$CLEANUP_ARTIFACTS_CRON") route="cleanup-artifacts" ;;
         "$RECONCILE_BOT_PR_RUNS_CRON") route="reconcile-bot-pr-runs" ;;
-        "$STALE_RECOVERY_CRON") route="stale-recovery" ;;
-        "$PROPOSE_CRON") route="propose" ;;
         *) error="no route for cron '${SCHEDULE:-}'" ;;
       esac
       ;;
@@ -180,7 +177,7 @@ classify_route() {
           route="${OPERATION}"
           trigger_kind="${INPUT_TRIGGER_KIND:-manual}"
           ;;
-        audit-close | cleanup-artifacts | reconcile-bot-pr-runs | stale-recovery | validate)
+          audit-close | cleanup-artifacts | reconcile-bot-pr-runs | validate)
           route="${OPERATION}"
           ;;
         *)

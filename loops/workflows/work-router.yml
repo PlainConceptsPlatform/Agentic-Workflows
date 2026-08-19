@@ -69,8 +69,7 @@ on:
     - cron: "17 1 * * 1"
     - cron: "43 3 * * *"
     - cron: "0 6 * * *"
-    - cron: "*/15 * * * *"
-    - cron: "0 */2 * * *"
+    - cron: "*/30 * * * *"
     - cron: "29 7 * * *"
 
   workflow_dispatch:
@@ -90,7 +89,6 @@ on:
           - audit-close
           - cleanup-artifacts
           - reconcile-bot-pr-runs
-          - stale-recovery
           - validate
       issue-number:
         description: "Issue number (required for refine / implement / direct)"
@@ -229,9 +227,41 @@ jobs:
       BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
       BOT_PRIVATE_KEY: ${{ secrets.BOT_PRIVATE_KEY }}
 
-  call-implement:
+  # Checks whether an open bot PR already exists for the issue. If it does, implement is
+  # skipped — the merge-gate will handle fixing the existing PR. This prevents duplicate
+  # PRs when retries are triggered after a merge-gate failure.
+  check-implement-pr:
     needs: [classify, authorize]
     if: needs.classify.outputs.route == 'implement' && needs.authorize.outputs.trusted == 'true'
+    runs-on: RunnerLandingZone
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      has-open-pr: ${{ steps.check.outputs.has-open-pr }}
+    steps:
+      - name: Check for existing open bot PR
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ needs.classify.outputs.issue-number }}
+        run: |
+          set -euo pipefail
+          existing=$(gh pr list --repo "$REPO" --state open \
+            --search "is:pr linked:issue $ISSUE_NUMBER" \
+            --json number,author --jq '[.[] | select(.author.login | test("[bot]$"))] | length')
+          if [ "$existing" -gt 0 ]; then
+            echo "has-open-pr=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Issue #$ISSUE_NUMBER already has an open bot PR. Skipping implement to prevent duplicates."
+          else
+            echo "has-open-pr=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  call-implement:
+    needs: [classify, authorize, check-implement-pr]
+    if: needs.classify.outputs.route == 'implement' && needs.authorize.outputs.trusted == 'true' && needs.check-implement-pr.outputs.has-open-pr != 'true'
     uses: ./.github/workflows/agent-implement.lock.yml
     concurrency:
       group: write-pipeline-${{ needs.classify.outputs.issue-number }}
@@ -504,29 +534,6 @@ jobs:
         with:
           token: ${{ github.token }}
           artifact-retention-days: ${{ vars.ARTIFACT_RETENTION_DAYS }}
-
-  stale-recovery:
-    needs: classify
-    if: needs.classify.outputs.route == 'stale-recovery'
-    runs-on: RunnerLandingZone
-    timeout-minutes: 15
-    concurrency:
-      group: stale-recovery
-      cancel-in-progress: false
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: read
-      actions: write
-    steps:
-      - name: Checkout workflow actions
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/stale-recovery
-        with:
-          token: ${{ github.token }}
-          stale-threshold-hours: ${{ vars.STALE_THRESHOLD_HOURS }}
 
   validate:
     needs: classify

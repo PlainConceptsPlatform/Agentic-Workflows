@@ -277,7 +277,21 @@ timeout-minutes: 90
      If a check fails, fix the cause and rerun. Do not weaken a test, lower a threshold, or skip
      a check to make it pass.
 
-   5. Before creating the pull request, update `changelog.json` in the project's
+   5. Before creating the pull request, check whether an open bot pull request already
+      exists that closes #${{ inputs.issue-number }}. Run:
+
+      ```
+      gh pr list --repo "$GITHUB_REPOSITORY" --state open --search "is:pr linked:issue ${{ inputs.issue-number }}" --json number,headRefName,author --jq '[.[] | select(.author.login | test("[bot]$"))] | if length > 0 then .[0] else empty end'
+      ```
+
+      If a PR already exists, do **not** create a new branch or PR. Push your changes to
+      the existing PR's branch (`headRefName`) instead, then call
+      `safeoutputs/push_to_pull_request_branch` rather than `safeoutputs/create_pull_request`.
+      This prevents duplicate PRs when a retry is triggered after a merge-gate failure.
+
+      If no existing PR is found, proceed to create a new one as described below.
+
+      Before creating the pull request, update `changelog.json` in the project's
       `src/shared/data/` folder (create `src/shared/data/changelog.json` if it does not
       exist; in a monorepo use `apps/web/src/shared/data/changelog.json`). The file
       has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
@@ -303,11 +317,14 @@ timeout-minutes: 90
 
     Choose exactly one:
 
-     - **`safeoutputs/create_pull_request`** , propose a pull request against `main` with
-       the verified changes. Its `body` must close the issue
-       (`Closes #${{ inputs.issue-number }}`) and summarise what changed and why.
-      This is the normal path.
-    - **`safeoutputs/report_incomplete`** , use only when infrastructure or tooling
+      - **`safeoutputs/create_pull_request`** , propose a pull request against `main` with
+        the verified changes. Its `body` must close the issue
+        (`Closes #${{ inputs.issue-number }}`) and summarise what changed and why.
+        Use this when no open bot PR exists for the issue.
+       This is the normal path.
+      - **`safeoutputs/push_to_pull_request_branch`** , push to an existing PR's branch
+        when step 5 found an open bot PR for this issue. Do not create a duplicate PR.
+      - **`safeoutputs/report_incomplete`** , use only when infrastructure or tooling
       prevents you from completing the task (e.g. the codebase cannot build due to a
       pre-existing error you cannot fix). Provide a specific `reason`.
     - **`safeoutputs/noop`** , use only when the issue context shows the work is already
