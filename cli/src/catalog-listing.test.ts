@@ -25,7 +25,7 @@ describe("catalog listing", () => {
     const templateNames = entries.filter((entry) => entry.kind === "template").map((entry) => entry.name);
 
     expect(routeNames).toEqual(["refine", "implement", "direct", "apply-review", "merge-gate", "audit", "propose"]);
-    expect(templateNames).toEqual(["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo", "github-release", "opencode.ci.json", "visual-evidence"]);
+    expect(templateNames).toEqual(["agentics-checks", "agentics-maintenance", "app-ci-dotnet-next", "app-ci-node-monorepo", "bug-report", "feature-request", "github-release", "opencode.ci.json", "visual-evidence"]);
   });
 
   it("reports all entries as not installed in an empty repository", async () => {
@@ -58,6 +58,22 @@ describe("catalog listing", () => {
 
     expect(checksEntry).toBeDefined();
     expect(checksEntry!.installed).toBe(true);
+  });
+
+  it("marks an issue template as installed when its file exists in .github/ISSUE_TEMPLATE/", async () => {
+    const repositoryPath = await createRepository({
+      ".github/ISSUE_TEMPLATE/bug_report.yml": "name: Bug report",
+      ".github/ISSUE_TEMPLATE/feature_request.yml": "name: Feature request",
+    });
+
+    const entries = await listCatalog({ installedPath: repositoryPath });
+    const bugEntry = entries.find((entry) => entry.name === "bug-report");
+    const featureEntry = entries.find((entry) => entry.name === "feature-request");
+
+    expect(bugEntry).toBeDefined();
+    expect(bugEntry!.installed).toBe(true);
+    expect(featureEntry).toBeDefined();
+    expect(featureEntry!.installed).toBe(true);
   });
 
   it("marks the opencode.ci.json template as installed when the file exists at repository root", async () => {

@@ -57,6 +57,8 @@ export const templateNames = [
   "agentics-maintenance",
   "app-ci-dotnet-next",
   "app-ci-node-monorepo",
+  "bug-report",
+  "feature-request",
   "github-release",
   "opencode.ci.json",
   "visual-evidence",
@@ -68,6 +70,7 @@ export interface CatalogTemplate {
   readonly name: TemplateName;
   readonly file: string;
   readonly description: string;
+  readonly target?: string;
 }
 
 export const catalogTemplates: readonly CatalogTemplate[] = [
@@ -75,6 +78,8 @@ export const catalogTemplates: readonly CatalogTemplate[] = [
   { name: "agentics-maintenance", file: "agentics-maintenance.yml", description: "Agentic maintenance: scheduled daily maintenance workflow for keeping workflows and actions up to date." },
   { name: "app-ci-dotnet-next", file: "app-ci-dotnet-next.yml", description: "App CI pipeline for a .NET + Next.js monorepo: build, test, and lint on PRs and schedule." },
   { name: "app-ci-node-monorepo", file: "app-ci-node-monorepo.yml", description: "App CI pipeline for a Node monorepo: build, test, and lint on PRs and schedule." },
+  { name: "bug-report", file: "bug_report.yml", description: "Bug report issue template: what happened, repro steps, expected behavior, acceptance criteria, environment, logs.", target: ".github/ISSUE_TEMPLATE/bug_report.yml" },
+  { name: "feature-request", file: "feature_request.yml", description: "Feature request issue template scoped to small, well-scoped improvements (Small/Medium only; large work belongs in a planning issue).", target: ".github/ISSUE_TEMPLATE/feature_request.yml" },
   { name: "github-release", file: "github-release.yml", description: "Publishes or updates a GitHub Release with generated notes whenever a v* tag is pushed." },
   { name: "opencode.ci.json", file: "opencode.ci.json", description: "Standalone OpenCode CI config: plainconcepts provider, GLM model registration, ci-workflow-agent, and LSP defaults for consumer repositories." },
   { name: "visual-evidence", file: "visual-evidence.yml", description: "Visual evidence: captures screenshots of UI changes on bot-authored PRs by reading the capturePlan left by the agent in evidence.json and executing it on a runner with Docker and Chrome access." },

@@ -31,7 +31,7 @@ export async function listCatalog(options: ListOptions = {}): Promise<readonly C
     name: template.name,
     description: template.description,
     file: template.file,
-    installed: await isFileInstalled(basePath, template.file),
+    installed: await isFileInstalled(basePath, template.file, template.target),
   })));
 
   return [...routes, ...templates];
@@ -80,8 +80,8 @@ function formatEntry(entry: CatalogEntry): string {
   return `  ${mark} ${entry.name} — ${entry.description}`;
 }
 
-async function isFileInstalled(basePath: string, workerOrTemplateFile: string): Promise<boolean> {
-  const installedPath = templateInstallPath(basePath, workerOrTemplateFile);
+async function isFileInstalled(basePath: string, workerOrTemplateFile: string, explicitTarget?: string): Promise<boolean> {
+  const installedPath = templateInstallPath(basePath, workerOrTemplateFile, explicitTarget);
   try {
     await access(installedPath, constants.F_OK);
     return true;
@@ -90,7 +90,8 @@ async function isFileInstalled(basePath: string, workerOrTemplateFile: string): 
   }
 }
 
-function templateInstallPath(basePath: string, file: string): string {
+function templateInstallPath(basePath: string, file: string, explicitTarget?: string): string {
+  if (explicitTarget !== undefined) return join(basePath, ...explicitTarget.split("/"));
   const isRootTemplate = file.endsWith(".json");
   return isRootTemplate ? join(basePath, file) : join(basePath, ".github", "workflows", file);
 }

@@ -9,6 +9,8 @@ installed as a mandatory file during catalog install; it is not optional.
 | `agentics-maintenance` | Repository wants gh-aw maintenance workflow before first compilation |
 | `app-ci-dotnet-next` | .NET, SQL Server integration testing, and Next.js match repository |
 | `app-ci-node-monorepo` | Node monorepo with supported web, desktop, mobile, and E2E layout matches repository |
+| `bug-report` | Repository needs a structured bug report issue template |
+| `feature-request` | Repository needs a feature request issue template scoped to small improvements |
 | `github-release` | Pushing a `v*` tag should publish a GitHub Release with generated notes |
 | `opencode.ci.json` | Always installed as mandatory during catalog install. Advanced: use `--template opencode.ci.json` to install in isolation |
 
@@ -29,7 +31,8 @@ pnpm exec workflows add --template agentics-checks
 Each optional template copies to `.github/workflows/<template>.yml`. The package does not track or
 update templates after installation. They are consumer-owned. `opencode.ci.json` is always installed
 to the repository root as a mandatory file during catalog install; it does not appear as an optional
-template in the TUI.
+template in the TUI. `bug-report` and `feature-request` are an exception: they copy to
+`.github/ISSUE_TEMPLATE/` instead of `.github/workflows/`.
 
 ## What each template does
 
@@ -76,6 +79,19 @@ scripts, and test commands to the repository.
 Publishes a GitHub Release when a tag matching `v*` is pushed. GitHub generates the notes by comparing
 the new tag with the preceding release. Re-running the workflow updates the existing release rather
 than failing. Change the tag pattern if the repository uses a different version convention.
+
+### `bug-report`
+
+A GitHub issue template for reporting defects. Installs to `.github/ISSUE_TEMPLATE/bug_report.yml`.
+Includes structured fields: what happened, steps to reproduce, expected behavior, where it occurs,
+acceptance criteria, open questions, environment, and logs. Bugs can be any size — no scope gate.
+
+### `feature-request`
+
+A GitHub issue template for proposing small improvements. Installs to
+`.github/ISSUE_TEMPLATE/feature_request.yml`. Scoped to small, well-scoped work: a required
+Small/Medium dropdown gate steers large features to a planning issue instead. Includes problem/
+motivation, proposed solution, alternatives, acceptance criteria, and open questions.
 
 ### `opencode.ci.json`
 

@@ -450,6 +450,25 @@ describe("catalog installation", () => {
       installed: [".github/workflows/agentics-checks.yml"],
     });
   });
+
+  it("installs issue templates to .github/ISSUE_TEMPLATE/", async () => {
+    const sourcePath = await createDirectory({
+      "templates/issues/bug_report.yml": "name: Bug report\n",
+      "templates/issues/feature_request.yml": "name: Feature request\n",
+    });
+    const repositoryPath = await createDirectory({});
+
+    await expect(installTemplate(repositoryPath, "bug-report", { sourcePath })).resolves.toEqual({
+      installed: [".github/ISSUE_TEMPLATE/bug_report.yml"],
+      conflicts: [],
+    });
+    await expect(installTemplate(repositoryPath, "feature-request", { sourcePath })).resolves.toEqual({
+      installed: [".github/ISSUE_TEMPLATE/feature_request.yml"],
+      conflicts: [],
+    });
+    await expect(readFile(join(repositoryPath, ".github/ISSUE_TEMPLATE/bug_report.yml"), "utf8")).resolves.toBe("name: Bug report\n");
+    await expect(readFile(join(repositoryPath, ".github/ISSUE_TEMPLATE/feature_request.yml"), "utf8")).resolves.toBe("name: Feature request\n");
+  });
 });
 
 describe("route lifecycle", () => {

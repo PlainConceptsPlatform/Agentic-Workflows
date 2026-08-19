@@ -48,7 +48,7 @@ describe("workflows CLI", () => {
 
     await expect(run(["add", "--template", "unknown"])).resolves.toBe(1);
 
-    expect(error).toHaveBeenCalledWith("--template must be one of: agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|github-release|opencode.ci.json|visual-evidence.");
+    expect(error).toHaveBeenCalledWith("--template must be one of: agentics-checks|agentics-maintenance|app-ci-dotnet-next|app-ci-node-monorepo|bug-report|feature-request|github-release|opencode.ci.json|visual-evidence.");
     error.mockRestore();
   });
 
@@ -88,9 +88,9 @@ describe("workflows CLI", () => {
     // None installed: all [ ]
     const installedCount = (output.match(/\[x\]/g) ?? []).length;
     expect(installedCount).toBe(0);
-    // 7 routes + 7 templates = 14 entries
+    // 7 routes + 9 templates = 16 entries
     const uninstalledCount = (output.match(/\[ \]/g) ?? []).length;
-    expect(uninstalledCount).toBe(14);
+    expect(uninstalledCount).toBe(16);
     log.mockRestore();
   });
 

@@ -381,11 +381,12 @@ async function writeUpdates(repositoryPath: string, updates: readonly ContentUpd
 function catalogTemplateMeta(template: TemplateName): { directory: string; file: string; target: string } {
   const entry = catalogTemplates.find((item) => item.name === template);
   if (entry === undefined) throw new Error(`Unknown template: ${template}`);
-  const directory = template.startsWith("opencode") ? "opencode" : template.startsWith("app-ci-") ? "ci" : template === "github-release" ? "release" : template === "visual-evidence" ? "visual-evidence" : "agentics";
+  const directory = template.startsWith("opencode") ? "opencode" : template.startsWith("app-ci-") ? "ci" : template === "github-release" ? "release" : template === "visual-evidence" ? "visual-evidence" : template === "bug-report" || template === "feature-request" ? "issues" : "agentics";
   const isWorkflow = entry.file.endsWith(".yml");
-  const target = template === "app-ci-dotnet-next"
+  const inferredTarget = template === "app-ci-dotnet-next"
     ? ".github/workflows/app-ci.yml"
     : isWorkflow ? `.github/workflows/${entry.file}` : entry.file;
+  const target = entry.target ?? inferredTarget;
   return { directory, file: entry.file, target };
 }
 

@@ -50,6 +50,7 @@ Options:
   --template <name>                           Install a standalone template alongside or instead of routes.
                                               Templates: agentics-checks, agentics-maintenance,
                                               app-ci-dotnet-next, app-ci-node-monorepo,
+                                              bug-report, feature-request, github-release,
                                               opencode.ci.json.
   --force                                     Overwrite managed files that differ from the package source.
   -h, --help                                  Show this help text.
