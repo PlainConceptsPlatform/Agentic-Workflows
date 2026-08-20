@@ -15,25 +15,19 @@ fi
 # The agent emits exactly one add_comment on the source issue. The comment body
 # must contain a verdict line matching **Verdict:** pass|needs-info|block.
 # Anything else is invalid.
+# Use test() before capture() because capture() throws on non-match and
+# the // operator only catches null/false, not errors.
 jq -r --arg issue "$issue_number" '
-  def has_triage_comment:
-    any(.items[]; .type == "add_comment" and
-      (.item_number | tostring) == $issue and
-      (.body | type == "string"));
-
   def extract_verdict:
     [.items[] | select(.type == "add_comment" and (.item_number | tostring) == $issue and (.body | type == "string"))]
-    | map(.body | capture("\\*\\*Verdict:\\*\\*\\s*(pass|needs-info|block)"; "i") // empty)
+    | map(.body | if test("\\*\\*Verdict:\\*\\*\\s*(pass|needs-info|block)"; "i") then capture("\\*\\*Verdict:\\*\\*\\s*(pass|needs-info|block)"; "i") else empty end)
     | .[0] // empty;
 
-  if has_triage_comment then
-    (extract_verdict | ascii_downcase) as $verdict |
-    if $verdict == "pass" or $verdict == "needs-info" or $verdict == "block" then
-      $verdict
-    else
-      "invalid"
-    end
+  (extract_verdict | if . == empty then empty else ascii_downcase end) as $verdict |
+  if $verdict == "pass" or $verdict == "needs-info" or $verdict == "block" then
+    $verdict
   else
     "invalid"
   end
 ' "$output_file"
+
