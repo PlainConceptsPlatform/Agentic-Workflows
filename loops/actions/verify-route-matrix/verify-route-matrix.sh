@@ -67,6 +67,10 @@ assert_route "unrelated label routes nowhere" none \
   EVENT=issues ACTION=labeled LABEL=documentation EVENT_ISSUE_NUMBER=42
 assert_route "a non-label issue action routes to triage" triage \
   EVENT=issues ACTION=opened EVENT_ISSUE_NUMBER=42
+assert_route "a human triage label routes to triage" triage \
+  EVENT=issues ACTION=labeled LABEL=triage ACTOR=maintainer EVENT_ISSUE_NUMBER=42
+assert_route "a bot triage label routes nowhere" none \
+  EVENT=issues ACTION=labeled LABEL=triage ACTOR=platform-devbox[bot] EVENT_ISSUE_NUMBER=42
 assert "refine label starts a first pass" first \
   "$(route_field refine-mode EVENT=issues ACTION=labeled LABEL=refine EVENT_ISSUE_NUMBER=42)"
 assert_route "direct label routes to direct" direct \

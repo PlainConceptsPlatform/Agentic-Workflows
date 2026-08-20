@@ -61,6 +61,20 @@ classify_route() {
               error="bot-working added but no work label (implement/refine/direct) found"
             fi
             ;;
+          triage)
+            # A maintainer can explicitly re-run triage by adding this label. The
+            # triage worker adds it after claiming the issue, so bot label events
+            # and an existing claim must not start a second worker.
+            if [ "${ACTOR:-}" != "" ] && echo "${ACTOR:-}" | grep -q '\[bot\]$'; then
+              error="bot-added triage label does not re-trigger triage"
+            elif has_label bot-working; then
+              error="issue already has bot-working label; triage already in progress"
+            else
+              route="triage"
+              issue_number="${EVENT_ISSUE_NUMBER:-}"
+              triage_mode="first"
+            fi
+            ;;
           refine | implement | direct)
             # If the actor is a bot (e.g. refine→implement transition), route directly.
             # If the actor is a human, authorize-bot-work.yml will add bot-working which triggers the workflow.
