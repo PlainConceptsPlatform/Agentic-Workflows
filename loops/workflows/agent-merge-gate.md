@@ -289,7 +289,9 @@ jobs:
             [View this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
   agent:
-    needs: protected_changes
+    # The top-level guard reads both outputs. GitHub Actions does not make a
+    # dependency's dependencies available through `needs` transitively.
+    needs: [subject, protected_changes]
     if: needs.protected_changes.outputs.requires_review != 'true'
 
 if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review != 'true'
