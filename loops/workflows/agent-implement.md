@@ -132,6 +132,18 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           pr-number: ${{ needs.safe_outputs.outputs.created_pr_number }}
           issue-number: ${{ inputs.issue-number }}
+      - name: Reconcile the new bot pull request
+        if: needs.safe_outputs.outputs.created_pr_number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          # GitHub may create the pending CI run shortly after the PR appears.
+          sleep 60
+          gh workflow run work-router.yml --repo "$REPO" --ref "$REF" \
+            -f operation=reconcile-bot-pr-runs
   incomplete:
     needs: [agent, safe_outputs, eligibility]
     if: >
