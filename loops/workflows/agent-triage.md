@@ -141,7 +141,7 @@ jobs:
           artifact-name: ${{ needs.activation.outputs.artifact_prefix }}agent
           token: ${{ steps.app-token.outputs.token }}
           apply-labels: 'false'
-          close-issues: 'true'
+          close-issues: 'false'
           fallback-issue-number: ${{ inputs.issue-number }}
       - name: Pass to refine pipeline
         if: needs.validate_output.outputs.outcome == 'pass'
@@ -184,6 +184,18 @@ jobs:
             ${{ env.TRIAGE_LABEL }}
             ${{ env.WORKING_LABEL }}
             ${{ env.REVIEW_LABEL }}
+      - name: Close blocked issue
+        if: needs.validate_output.outputs.outcome == 'block'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            await github.rest.issues.update({
+              ...context.repo,
+              issue_number: Number('${{ inputs.issue-number }}'),
+              state: 'closed',
+              state_reason: 'not_planned',
+            });
   incomplete:
     needs: [agent, safe_outputs, validate_output]
     if: >
@@ -270,7 +282,6 @@ safe-outputs:
   threat-detection: false
   add-comment:
     target: "*"
-  close-issue:
 
 
 timeout-minutes: 30
@@ -367,10 +378,6 @@ timeout-minutes: 30
    3. A structured assessment with all 10 check results
    4. A line `**Verdict:** pass` or `**Verdict:** needs-info` or `**Verdict:** block`
 
-   **On block verdict only:** also emit `close_issue` (item_number:
-   ${{ inputs.issue-number }}) with a `reason` summarising why the issue was blocked.
-   The workflow applies it after the comment.
-
    Format the checks as a list with status indicators:
 
    ```
@@ -386,8 +393,8 @@ timeout-minutes: 30
     **Product eligibility:** ✅ Product request / ❌ Technical request: [area]
    ```
 
-8. Labels are workflow-owned state. Do not call `add_labels` or `remove_labels`. The workflow
-   handles all label transitions based on your verdict.
+8. Issue state is workflow-owned. Do not call tools other than the one `add_comment`; the workflow
+   handles labels and closes a block verdict after applying your comment.
 
 9. Ignore the `## Diagram` section below. It is documentation for humans and contains no
    instructions for you.
