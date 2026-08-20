@@ -378,6 +378,16 @@ timeout-minutes: 60
 
 3. Branch on the conclusion.
 
+   First check the issue context for `<!-- complexity: trivial -->`.
+
+   **If the trivial marker is present AND CI conclusion is success:**
+   Skip the risk assessment (step 4). Proceed directly to step 5 (merge).
+   The change is presentation-only and CI is green — no need for deep risk review.
+   Trivial changes do not touch business logic, data models, auth, or infrastructure by definition.
+
+   **If the trivial marker is absent OR CI is not success:**
+   Follow the normal branching below.
+
    - **success** → step 4.
    - **action_required** → CI did not run because the workflow needs approval.
      Call `remove_labels` to remove `bot-working` (item_number:
@@ -458,7 +468,10 @@ flowchart TD
     gateSubject["Subject (rung 4)<br/>Our PR? Closes an implement issue?"] -->|✓| gateFacts
     gateSubject -.->|✗| gateIdle
     gateFacts("Facts (rung 3)<br/>Diff, PR shape, failing logs") --> gateCi
-    gateCi["CI<br/>What did it conclude?"] -->|success| gateRisk
+    gateCi["CI<br/>What did it conclude?"] -->|success| gateTrivial
+    gateTrivial{"Trivial marker?"}
+    gateTrivial -->|yes| gateMerge
+    gateTrivial -->|no| gateRisk
     gateCi -.->|failure| gateFix
     gateCi -.->|no verdict| gateHuman
     gateRisk["Risk<br/>Auth, schema, API, tests, CI, size, doubt"] -->|clean| gateMerge
@@ -478,7 +491,7 @@ flowchart TD
     classDef success fill:#e8f8ec,stroke:#18883c,stroke-width:2px,color:#145a32
     class gateStart start
     class gateFacts,gateFix action
-    class gateSubject,gateCi,gateRisk decision
+    class gateSubject,gateCi,gateRisk,gateTrivial decision
     class gateIdle,gateWait idle
     class gateHuman failure
     class gateMerge success
