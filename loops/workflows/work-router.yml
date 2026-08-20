@@ -25,6 +25,10 @@ run-name: >-
   && format('Working (Direct): {0} (#{1})', github.event.issue.title, github.event.issue.number)
   || github.event_name == 'issues'
   && github.event.label.name == 'bot-working'
+  && contains(github.event.issue.labels.*.name, 'triage')
+  && format('Working (Triage): {0} (#{1})', github.event.issue.title, github.event.issue.number)
+  || github.event_name == 'issues'
+  && github.event.label.name == 'bot-working'
   && format('Working: {0} (#{1})', github.event.issue.title, github.event.issue.number)
   || github.event_name == 'issues'
   && format('{0} label on #{1} by {2}', github.event.label.name, github.event.issue.number, github.actor)
