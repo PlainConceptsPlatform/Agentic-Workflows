@@ -200,13 +200,15 @@ for route in refine implement direct apply-review; do
   fi
 done
 
-# Triage inverts the authorize check: it fires only for outside collaborators
-# (read permission), not for write+ users.
-if grep -qE "route == 'triage'.*needs\.authorize\.outputs\.is_outside_collaborator == 'true'" "$ROUTER_YML"; then
+# Triage allows both outside collaborators (read permission) and write+ users
+# (for re-triage on comments). The gate checks either condition.
+if grep -qE "route == 'triage'.*is_outside_collaborator == 'true'.*trusted == 'true'" "$ROUTER_YML" || \
+   grep -qE "route == 'triage'.*trusted == 'true'.*is_outside_collaborator == 'true'" "$ROUTER_YML" || \
+   grep -qE "route == 'triage'.*is_outside_collaborator == 'true'.*\|\|.*trusted == 'true'" "$ROUTER_YML"; then
   PASS=$((PASS + 1))
 else
   FAIL=$((FAIL + 1))
-  echo "FAIL: route 'triage' does not require needs.authorize.outputs.is_outside_collaborator" >&2
+  echo "FAIL: route 'triage' does not require is_outside_collaborator or trusted" >&2
 fi
 
 for route in refine implement direct triage apply-review merge-gate audit propose bot-approve \

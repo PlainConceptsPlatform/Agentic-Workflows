@@ -142,6 +142,7 @@ jobs:
           artifact-name: ${{ needs.activation.outputs.artifact_prefix }}agent
           token: ${{ steps.app-token.outputs.token }}
           apply-labels: 'false'
+          close-issues: 'true'
           fallback-issue-number: ${{ inputs.issue-number }}
       - name: Pass to refine pipeline
         if: needs.validate_output.outputs.outcome == 'pass'
@@ -277,6 +278,7 @@ safe-outputs:
   threat-detection: false
   add-comment:
     target: "*"
+  close-issue:
 
 
 timeout-minutes: 30
@@ -360,13 +362,17 @@ timeout-minutes: 30
 
    **block.** The issue cannot be done, is a security risk, is too dangerous to automate,
    or is too ambiguous after ${{ env.MAX_TRIAGE_ROUNDS }} rounds of triage. State the reason
-   clearly. The blocked label will be added.
+   clearly. The blocked label will be added and the issue will be closed.
 
 7. Emit exactly one `add_comment` targeting issue `${{ inputs.issue-number }}` with:
    1. `${{ env.TRIAGE_MARKER }}`
    2. `${{ env.SAFE_OUTPUT_COMMENT_PREFIX }}` (round N of ${{ env.MAX_TRIAGE_ROUNDS }})
    3. A structured assessment with all 10 check results
    4. A line `**Verdict:** pass` or `**Verdict:** needs-info` or `**Verdict:** block`
+
+   **On block verdict only:** also emit `close_issue` (item_number:
+   ${{ inputs.issue-number }}) with a `reason` summarising why the issue was blocked.
+   The workflow applies it after the comment.
 
    Format the checks as a list with status indicators:
 

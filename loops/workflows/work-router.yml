@@ -309,7 +309,7 @@ jobs:
 
   call-triage:
     needs: [classify, authorize]
-    if: needs.classify.outputs.route == 'triage' && needs.authorize.outputs.is_outside_collaborator == 'true'
+    if: needs.classify.outputs.route == 'triage' && (needs.authorize.outputs.is_outside_collaborator == 'true' || needs.authorize.outputs.trusted == 'true')
     uses: ./.github/workflows/agent-triage.lock.yml
     concurrency:
       group: triage-${{ needs.classify.outputs.issue-number }}
