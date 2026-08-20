@@ -297,8 +297,11 @@ timeout-minutes: 90
       has shape `{"version":1,"changes":[...]}`. Use `jq` to prepend a new entry
       with `"timestamp"` (ISO 8601), `"issue"` (number), `"title"` (issue title),
       `"summary"` (1-2 sentences of what you changed), and `"commit"` (short SHA).
-      Keep at most 10 entries: if there are already 10, drop the oldest. Commit
-      this file as part of the same branch before creating the PR.
+      After prepending, trim the array to the 10 newest entries by dropping entries
+      from the end. This means: if the array has N entries after prepend and N > 10,
+      drop the last N - 10 entries. Never drop more than necessary and never drop the
+      new entry you just added. Commit this file as part of the same branch before
+      creating the PR.
 
       The changelog is user-facing. Write the summary for a non-technical reader. Never
       expose security, auth, or admin internals: no token/session/JWT details, no
