@@ -43,6 +43,15 @@ run-name: >-
   || github.event_name == 'workflow_run'
   && format('CI {0} on {1}', github.event.workflow_run.conclusion, github.event.workflow_run.head_branch)
   || github.event_name == 'workflow_dispatch'
+  && inputs.operation == 'triage'
+  && format('Working (Triage): #{0}', inputs.issue-number)
+  || github.event_name == 'workflow_dispatch'
+  && inputs.operation == 'refine'
+  && format('Working (Refine): #{0}', inputs.issue-number)
+  || github.event_name == 'workflow_dispatch'
+  && inputs.operation == 'implement'
+  && format('Working (Implement): #{0}', inputs.issue-number)
+  || github.event_name == 'workflow_dispatch'
   && format('dispatch: {0}', inputs.operation)
   || github.event_name == 'schedule'
   && format('schedule {0}', github.event.schedule)
