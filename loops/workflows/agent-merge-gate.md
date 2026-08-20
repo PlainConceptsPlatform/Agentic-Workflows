@@ -174,6 +174,8 @@ jobs:
       contents: read
       issues: write
       pull-requests: read
+    outputs:
+      has_conflicts: ${{ steps.conflicts.outputs.has_conflicts || 'false' }}
     steps:
       - name: Checkout workflow actions
         if: needs.subject.outputs.conclusion == 'failure'
@@ -444,20 +446,28 @@ timeout-minutes: 60
    (item_number: ${{ needs.subject.outputs.pr }}) on the PR with the same message.
    Leave `implement` in place: the work is not finished until a human merges it.
 
- 7. **CI failed** → read `/tmp/gh-aw/agent/failed-jobs.json` and
-    `/tmp/gh-aw/agent/failed-logs.txt`, which are already on disk. Load only skills required to
-    fix the actual cause. Run these verification commands before a push. Do not weaken a test,
-    disable a check, or push an unverified guess.
+  7. **CI failed** → read `/tmp/gh-aw/agent/failed-jobs.json` and
+     `/tmp/gh-aw/agent/failed-logs.txt`, which are already on disk. Load only skills required to
+     fix the actual cause. Run these verification commands before a push. Do not weaken a test,
+     disable a check, or push an unverified guess.
+
+     **If `has_conflicts` is `true` (current value: `${{ needs.reserve.outputs.has_conflicts }}`):** You are already on the PR branch. Resolve the conflict;
+     it is not a reason to hand the PR to a human. Merge `origin/${{ github.event.repository.default_branch }}`
+     into the current branch, resolve every conflict deliberately, stage the resolutions, and
+     commit the merge. Then run verification and push the resulting branch update. Do not use
+     `--ours`, `--theirs`, or a blanket conflict-marker deletion without reviewing the intended
+     behavior from both sides.
 
      ```
      ${{ env.VERIFY_COMMANDS }}
      ```
 
-   Call `push_to_pull_request_branch` (pr_number: ${{ needs.subject.outputs.pr }}) to push
+    Call `push_to_pull_request_branch` (pr_number: ${{ needs.subject.outputs.pr }}, branch: the
+    current PR branch) to push
    the fix, then `remove_labels` (item_number: ${{ needs.subject.outputs.issue }}) to remove
    `bot-working`. CI will run again and trigger you again with the new result.
 
-   If you cannot fix it, or the logs show you have already tried on this same head commit,
+    If you cannot fix it after a concrete repair attempt, or the logs show you have already tried on this same head commit,
    stop looping: `remove_labels` (item_number: ${{ needs.subject.outputs.issue }}) to remove
    `implement` and `bot-working`, `add_labels` (item_number:
    ${{ needs.subject.outputs.issue }}) to add `review`, and `add_comment` (item_number:
