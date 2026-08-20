@@ -118,35 +118,42 @@ jobs:
 
   review_required:
     needs: [subject, protected_changes]
-    if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review == 'true'
+    # gh-aw makes the agent depend on custom jobs. Keep this job successful when
+    # there are no protected files instead of skipping it and blocking remediation.
+    if: always() && needs.subject.outputs.found == 'true'
     runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
     steps:
       - name: Checkout workflow actions
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Create bot token
+        if: needs.protected_changes.outputs.requires_review == 'true'
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
       - name: Release the issue
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: ./.github/actions/remove-issue-labels
         with:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ needs.subject.outputs.issue }}
           labels: ${{ env.WORKING_LABEL }}
       - name: Flag human review
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: ./.github/actions/add-issue-labels
         with:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ needs.subject.outputs.issue }}
           labels: ${{ env.REVIEW_LABEL }}
       - name: Explain the merge hold
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: ./.github/actions/create-issue-comment
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -292,9 +299,9 @@ jobs:
     # The top-level guard reads both outputs. GitHub Actions does not make a
     # dependency's dependencies available through `needs` transitively.
     needs: [subject, protected_changes]
-    if: needs.protected_changes.outputs.requires_review != 'true'
+    if: always() && needs.protected_changes.outputs.requires_review != 'true'
 
-if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review != 'true'
+if: always() && needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review != 'true'
 
 runs-on: RunnerLandingZone
 runs-on-slim: RunnerLandingZone
