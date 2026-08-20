@@ -353,6 +353,11 @@ timeout-minutes: 40
 
     Labels are workflow-owned state. Do not call `add_labels` or `remove_labels`.
 
+    **Do not probe safe-output tools.** Never call `update_issue` or `add_comment` with
+    empty or test arguments — each safe-output type has a per-run limit of 1 call, and a
+    probe call consumes that quota. Call a safe-output tool exactly once, with the full
+    final payload, when you are ready to commit to the outcome.
+
     **Questions remain.** You set aside one or more questions for the author that the codebase
     could not answer. Leave the body unchanged. Call `add_comment` once with:
    1. `${{ env.REFINE_MARKER }}`
