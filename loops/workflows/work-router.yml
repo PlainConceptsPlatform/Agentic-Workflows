@@ -52,6 +52,9 @@ run-name: >-
   && inputs.operation == 'implement'
   && format('Working (Implement): #{0}', inputs.issue-number)
   || github.event_name == 'workflow_dispatch'
+  && inputs.operation == 'merge-gate'
+  && format('Working (Merge Gate): PR #{0}', inputs.pr-number)
+  || github.event_name == 'workflow_dispatch'
   && format('dispatch: {0}', inputs.operation)
   || github.event_name == 'schedule'
   && format('schedule {0}', github.event.schedule)
