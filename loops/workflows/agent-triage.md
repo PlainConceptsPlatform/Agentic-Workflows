@@ -187,12 +187,14 @@ jobs:
       - name: Close blocked issue
         if: needs.validate_output.outputs.outcome == 'block'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue-number }}
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
             await github.rest.issues.update({
               ...context.repo,
-              issue_number: Number('${{ inputs.issue-number }}'),
+              issue_number: Number(process.env.ISSUE_NUMBER),
               state: 'closed',
               state_reason: 'not_planned',
             });
