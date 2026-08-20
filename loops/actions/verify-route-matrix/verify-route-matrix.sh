@@ -200,15 +200,15 @@ for route in refine implement direct apply-review; do
   fi
 done
 
-# Triage allows both outside collaborators (read permission) and write+ users
-# (for re-triage on comments). The gate checks either condition.
-if grep -qE "route == 'triage'.*is_outside_collaborator == 'true'.*trusted == 'true'" "$ROUTER_YML" || \
-   grep -qE "route == 'triage'.*trusted == 'true'.*is_outside_collaborator == 'true'" "$ROUTER_YML" || \
-   grep -qE "route == 'triage'.*is_outside_collaborator == 'true'.*\|\|.*trusted == 'true'" "$ROUTER_YML"; then
+# Triage runs under a trusted App identity. Outside collaborators are admitted only to
+# the deterministic dispatcher; the worker call itself requires a trusted actor.
+if grep -qE "dispatch-triage:.*" "$ROUTER_YML" && \
+   grep -qE "route == 'triage'.*is_outside_collaborator == 'true'" "$ROUTER_YML" && \
+   grep -qE "route == 'triage'.*trusted == 'true'" "$ROUTER_YML"; then
   PASS=$((PASS + 1))
 else
   FAIL=$((FAIL + 1))
-  echo "FAIL: route 'triage' does not require is_outside_collaborator or trusted" >&2
+  echo "FAIL: route 'triage' does not dispatch outside collaborators and require a trusted worker actor" >&2
 fi
 
 for route in refine implement direct triage apply-review merge-gate audit propose bot-approve \

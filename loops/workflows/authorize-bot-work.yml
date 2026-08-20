@@ -17,12 +17,13 @@ permissions:
 jobs:
   authorize:
     # Only trigger for implement/refine/direct labels from HUMANS (not bots),
-    # and only if bot-working is NOT already present
+    # and only if neither another bot run nor human review currently owns the issue.
     if: >
       (github.event.label.name == 'implement' ||
        github.event.label.name == 'refine' ||
        github.event.label.name == 'direct') &&
       !contains(github.event.issue.labels.*.name, 'bot-working') &&
+      !contains(github.event.issue.labels.*.name, 'review') &&
       !endsWith(github.actor, '[bot]')
     runs-on: RunnerLandingZone
     timeout-minutes: 5

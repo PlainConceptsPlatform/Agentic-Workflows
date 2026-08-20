@@ -302,7 +302,7 @@ timeout-minutes: 90
       exists that closes #${{ inputs.issue-number }}. Run:
 
       ```
-      gh pr list --repo "$GITHUB_REPOSITORY" --state open --search "is:pr linked:issue ${{ inputs.issue-number }}" --json number,headRefName,author --jq '[.[] | select(.author.login | test("[bot]$"))] | if length > 0 then .[0] else empty end'
+       gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName,author,body --jq '[.[] | select(.author.login | startswith("app/") or endswith("[bot]")) | (.body | ascii_downcase) as $body | select($body | contains("close #${{ inputs.issue-number }}") or contains("closes #${{ inputs.issue-number }}") or contains("closed #${{ inputs.issue-number }}") or contains("fix #${{ inputs.issue-number }}") or contains("fixes #${{ inputs.issue-number }}") or contains("fixed #${{ inputs.issue-number }}") or contains("resolve #${{ inputs.issue-number }}") or contains("resolves #${{ inputs.issue-number }}") or contains("resolved #${{ inputs.issue-number }}"))] | if length > 0 then .[0] else empty end'
       ```
 
       If a PR already exists, do **not** create a new branch or PR. Push your changes to

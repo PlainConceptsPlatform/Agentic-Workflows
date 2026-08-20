@@ -3,7 +3,6 @@
 env:
   REPO_RULES: "Triage issues opened by outside collaborators. Assess template completeness, security risk, change size, danger level, duplicates, clarity, reproducibility, acceptance criteria, and cross-cutting impact. Do not implement code. Do not modify the issue body."
   TRIAGE_LABEL: triage
-  BLOCKED_LABEL: blocked
   WORKING_LABEL: bot-working
   REVIEW_LABEL: review
   REFINE_LABEL: refine
@@ -24,7 +23,7 @@ description: |
   duplicate detection, clarity, reproducibility, acceptance criteria quality,
   cross-cutting impact, and area suggestion. Loops up to 3 rounds (needs-info →
   author or write+ user replies → re-triage). On pass, adds the refine label to
-  enter the normal pipeline. On block, adds the blocked label.
+   enter the normal pipeline. On block, closes the issue with an explanation.
 
   Write+ users skip triage entirely — the authorize job gates on
   is_outside_collaborator (read permission only).
@@ -175,13 +174,6 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ inputs.issue-number }}
           labels: ${{ env.WORKING_LABEL }}
-      - name: Block the issue
-        if: needs.validate_output.outputs.outcome == 'block'
-        uses: ./.github/actions/add-issue-labels
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          issue-number: ${{ inputs.issue-number }}
-          labels: ${{ env.BLOCKED_LABEL }}
       - name: Clear triage on block
         if: needs.validate_output.outputs.outcome == 'block'
         uses: ./.github/actions/remove-issue-labels
@@ -346,23 +338,28 @@ timeout-minutes: 30
    API contracts, database schemas, or other repositories? Flag any mention of shared
    dependencies, contracts, or schemas that multiple teams depend on.
 
-   **Check 10 — Area suggestion.** Based on the content, which part of the codebase does
-   this likely touch? Suggest: Backend, Frontend, Infrastructure, CLI / tooling,
-   Documentation, or Other. This speeds up maintainer triage.
+    **Check 10 — Product-owner eligibility.** Product-owner intake is limited to user
+    experience and workflows, branding/content, business rules, and business formulas.
+    The issue must describe the desired product outcome, not prescribe technical means.
+    Block requests for architecture, infrastructure, developer tooling, deployment,
+    security/authentication/authorization, data storage/models/migrations, APIs, service
+    composition, framework adoption, solution/project structure, or other technical
+    fundamentals. These require a maintainer-owned technical proposal, even when clear,
+    small, local-only, or testable.
 
 6. Decide exactly one verdict:
 
-   **pass.** All checks pass or have only minor warnings. The issue is clear, safe,
-   appropriately scoped, and ready for refinement. The refine label will be added by the
-   workflow to enter the normal pipeline.
+    **pass.** All checks pass, including Product-owner eligibility. The issue is a clear,
+    appropriately scoped product request and ready for refinement. The refine label will
+    be added by the workflow to enter the normal pipeline.
 
    **needs-info.** One or more checks need clarification from the author. State exactly
    what information is missing and what the author should provide. The review label will be
    added; the author or a write+ user can comment to re-trigger triage.
 
-   **block.** The issue cannot be done, is a security risk, is too dangerous to automate,
-   or is too ambiguous after ${{ env.MAX_TRIAGE_ROUNDS }} rounds of triage. State the reason
-   clearly. The blocked label will be added and the issue will be closed.
+    **block.** The issue is outside product-owner eligibility, cannot be done, is a security
+    risk, is too dangerous to automate, or is too ambiguous after ${{ env.MAX_TRIAGE_ROUNDS }}
+    rounds of triage. State the reason clearly. The issue will be closed.
 
 7. Emit exactly one `add_comment` targeting issue `${{ inputs.issue-number }}` with:
    1. `${{ env.TRIAGE_MARKER }}`
@@ -386,7 +383,7 @@ timeout-minutes: 30
    **Reproducibility:** ✅ Clear / ⚠️ Insufficient / N/A
    **Acceptance:** ✅ Testable / ⚠️ Vague
    **Cross-cutting:** ✅ Self-contained / ⚠️ Touches: [areas]
-   **Area:** [suggestion]
+    **Product eligibility:** ✅ Product request / ❌ Technical request: [area]
    ```
 
 8. Labels are workflow-owned state. Do not call `add_labels` or `remove_labels`. The workflow
@@ -413,7 +410,7 @@ flowchart TD
     triPass(("Passed<br/>refine added, triage removed"))
     triReview(("Needs info<br/>review added, bot-working removed"))
     triReview -->|author or write+ replies<br/>via Work Router| triStart
-    triBlocked(("Blocked<br/>blocked added, triage removed"))
+    triBlocked(("Blocked<br/>issue closed, triage removed"))
     triIdle(("Idle<br/>Write+ user, skipped"))
     triIncomplete(("Incomplete<br/>review added, retry"))
 

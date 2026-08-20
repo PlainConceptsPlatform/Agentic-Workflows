@@ -70,7 +70,7 @@ When an outside collaborator opens an issue, the triage agent runs 10 checks (te
 
 - **pass**: all checks pass → bot adds `refine` label → enters the normal pipeline (refine → implement) with no human in the loop.
 - **needs-info**: needs clarification → bot posts questions, adds `review` label → author or write+ user replies → re-triage.
-- **block**: cannot be done, security risk, or too dangerous → bot adds `blocked` label.
+- **block**: outside product-owner scope, cannot be done, security risk, or too dangerous → bot closes the issue with an explanation.
 
 At round 3, `needs-info` is no longer valid — the agent must `pass` or `block`.
 
