@@ -290,7 +290,7 @@ timeout-minutes: 45
    Write all four, not just the winner. Next run reads this to avoid re-deriving the three that
    lost. A body containing only the winner makes this workflow amnesiac.
 
-   **Section 2, The proposal:** Call skill("ob-plan-story") and refine the highest scorer into a
+   **Section 2, The proposal:** Call skill("pc-plan-story") and refine the highest scorer into a
    user story in Mike Cohn's As a / I want to / so that form, with Given/When/Then acceptance
    criteria, edge cases, and the likely files to change.
 

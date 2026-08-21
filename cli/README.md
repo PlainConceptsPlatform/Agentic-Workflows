@@ -14,7 +14,7 @@ The TUI lists all routes and templates with install status. Arrow keys navigate,
 
 ## Install
 
-Before installing workflows, install and configure [`PlainConceptsPlatform/opencode-onboard`](https://github.com/PlainConceptsPlatform/opencode-onboard) in the consumer repository. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available before compiling workflows.
+Before installing workflows, install and configure [`PlainConceptsPlatform/agent-harness`](https://github.com/PlainConceptsPlatform/agent-harness) in the consumer repository. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available before compiling workflows.
 
 For non-interactive use (advanced):
 

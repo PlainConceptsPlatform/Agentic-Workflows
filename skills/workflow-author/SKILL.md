@@ -48,7 +48,7 @@ context, give it a bounded task, and require one complete final Safe Outputs pay
 - `loops/actions/` contains deterministic, parameterised composite actions.
 - `loops/scripts/compile-agent-workflows.mjs` compiles source loops. Do not repair generated
   lockfiles by hand.
-- Workers depend on `PlainConceptsPlatform/opencode-onboard`. Keep required skill and command use
+- Workers depend on `PlainConceptsPlatform/agent-harness`. Keep required skill and command use
   explicit in each worker's prompt.
 - Do not create a repository configuration file. Each worker owns a complete top-level `env:` block
   with concrete defaults for every value it uses. Imports may add shared mechanics but cannot hide

@@ -258,8 +258,8 @@ timeout-minutes: 180
      left off and act on the latest comment.
 
 3. The issue body or the latest human comment is a **free-form instruction**. Execute it
-   exactly as asked. Load whatever skills the instruction names (`ob-plan-explore`,
-   `ob-plan-propose`, `ob-plan-apply`, `ob-make-engineer`, etc.). The instruction may ask you
+   exactly as asked. Load whatever skills the instruction names (`pc-plan-explore`,
+   `pc-plan-propose`, `pc-plan-apply`, `pc-make-engineer`, etc.). The instruction may ask you
    to explore, plan, implement, create files, refactor, or anything else a maintainer would do
    manually.
 

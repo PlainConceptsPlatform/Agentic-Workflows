@@ -243,7 +243,7 @@ timeout-minutes: 90
 
    **If the trivial marker is present (trivial path):**
 
-   Skip the `ob-plan-goal` pipeline entirely. Instead, implement directly:
+   Skip the `pc-plan-goal` pipeline entirely. Instead, implement directly:
 
    a. Create a todo entry for each checklist item (`- [ ]`) found in the issue body.
 
@@ -256,33 +256,33 @@ timeout-minutes: 90
       options for more than one turn.
 
    After all todos are complete, skip directly to step 4 (verify). Do not run
-   `ob-plan-goal`, `ob-plan-archive`, or `ob-ops-evidence`.
+   `pc-plan-goal`, `pc-plan-archive`, or `pc-ops-evidence`.
 
    **If the trivial marker is absent (standard path):**
 
    Follow the `/plan-goal` pipeline end-to-end. Do not create ad-hoc todo lists or
    manually orchestrate implementation steps. Instead:
 
-   a. Load the `ob-plan-goal` skill. It defines a mandatory, gate-sequenced pipeline:
+   a. Load the `pc-plan-goal` skill. It defines a mandatory, gate-sequenced pipeline:
       `explore · propose · apply · verify · archive · evidence · output · report`
 
    b. **Refined-issue fast path:** If the issue context at `${{ env.ISSUE_CONTEXT_PATH }}`
       already contains structured acceptance criteria (e.g. "## Acceptance criteria",
       "### Scenario:", Gherkin blocks), affected artifacts, and design decisions, the
-      `ob-plan-goal` skill will skip the explore and propose phases and go directly to
+      `pc-plan-goal` skill will skip the explore and propose phases and go directly to
       apply. Do not override this: re-exploring a pre-refined issue wastes tokens.
 
-   c. Execute every phase in order. Each phase loads its own sub-skill (`ob-plan-explore`,
-      `ob-plan-propose`, `ob-plan-apply`, `ob-repo-verify`, `ob-plan-archive`,
-      `ob-ops-evidence`) and owns its procedure. You must not skip a phase unless the
+   c. Execute every phase in order. Each phase loads its own sub-skill (`pc-plan-explore`,
+      `pc-plan-propose`, `pc-plan-apply`, `pc-repo-verify`, `pc-plan-archive`,
+      `pc-ops-evidence`) and owns its procedure. You must not skip a phase unless the
       pipeline's refined-issue detection says to.
 
-    d. The `apply` phase uses `ob-plan-apply` which delegates implementation to specialist
+    d. The `apply` phase uses `pc-plan-apply` which delegates implementation to specialist
        subagent waves. Let it own worker resolution, concurrency, and retry , do not
-       implement the tasks yourself unless `ob-plan-apply` instructs you to.
+       implement the tasks yourself unless `pc-plan-apply` instructs you to.
 
     e. **Evidence phase:** The agent sandbox cannot run Docker or headless Chromium.
-       `ob-ops-evidence` writes a `capturePlan` in `evidence.json` instead of capturing
+       `pc-ops-evidence` writes a `capturePlan` in `evidence.json` instead of capturing
        screenshots. A separate "Visual evidence" CI workflow runs the capturePlan on a
        runner with full access. Do not attempt workarounds — write the capturePlan and move on.
 

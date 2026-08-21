@@ -89,7 +89,7 @@ Recommend `pnpm exec workflows` (no arguments) when the consumer installs
 `@plainconceptsplatform/workflows` as a project-local development dependency. Use
 `pnpm exec workflows <init|add|update>` for non-interactive use.
 
-Consumers install and configure `PlainConceptsPlatform/opencode-onboard` before compilation, then
+Consumers install and configure `PlainConceptsPlatform/agent-harness` before compilation, then
 verify required worker skills and commands. `init` inspects repository and visibility without writing
 files. `add` installs managed loops and mandatory files (`opencode.ci.json`, `scripts/compile-agent-workflows.mjs`).
 `update` refreshes them.

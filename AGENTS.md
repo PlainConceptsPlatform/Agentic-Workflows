@@ -15,8 +15,8 @@
 
 ## Consumer prerequisite
 
-- Consumer repositories must install and configure `PlainConceptsPlatform/opencode-onboard` before using or compiling loops. Loop workers invoke the skills and commands it provides.
-- Before compilation, verify the required `opencode-onboard` skills and commands are available in the consumer repository.
+- Consumer repositories must install and configure `PlainConceptsPlatform/agent-harness` before using or compiling loops. Loop workers invoke the skills and commands it provides.
+- Before compilation, verify the required `agent-harness` skills and commands are available in the consumer repository.
 - The primary entrypoint is the interactive TUI: `npx @plainconceptsplatform/workflows` (no arguments). Recommend this for most consumers.
 - Non-interactive commands (`init`, `add`, `update`, `status`, `list`, `search`) are advanced options for automation and scripting.
 - `pnpm exec workflows` (no arguments) launches the TUI when `@plainconceptsplatform/workflows` is installed as a project-local development dependency. Use `pnpm exec workflows <init|add|update>` for non-interactive use.

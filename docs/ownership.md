@@ -26,7 +26,7 @@ The router (`work-router.yml`), the classifier (`classify-route/classify-route.s
 
 ## Consumer prerequisite
 
-Before installing or compiling workflows, consumers should install and configure `PlainConceptsPlatform/opencode-onboard`. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available in the consumer repository before compiling.
+Before installing or compiling workflows, consumers should install and configure `PlainConceptsPlatform/agent-harness`. Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available in the consumer repository before compiling.
 
 The primary entrypoint is the interactive TUI: `npx @plainconceptsplatform/workflows` (no arguments). Non-interactive commands (`init`, `add`, `update`) are advanced options for automation. Use `pnpm exec workflows` (no arguments) to launch the TUI when the package is a project-local development dependency.
 

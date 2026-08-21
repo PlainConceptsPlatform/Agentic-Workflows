@@ -1,7 +1,7 @@
 # Install and update
 
 Prerequisite: the consumer repository installs and configures
-`PlainConceptsPlatform/opencode-onboard`, then verifies worker-required skills and commands before
+`PlainConceptsPlatform/agent-harness`, then verifies worker-required skills and commands before
 compilation.
 
 ## CLI commands

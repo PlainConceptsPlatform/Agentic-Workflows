@@ -13,7 +13,7 @@ Consumer repositories generate and commit their own `*.lock.yml` files. This rep
 
 ## Consumer prerequisite
 
-Before installing or compiling these workflows, consumer repositories should install and configure [`PlainConceptsPlatform/opencode-onboard`](https://github.com/PlainConceptsPlatform/opencode-onboard). Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available in the consumer repository before compiling.
+Before installing or compiling these workflows, consumer repositories should install and configure [`PlainConceptsPlatform/agent-harness`](https://github.com/PlainConceptsPlatform/agent-harness). Loop workers invoke the skills and commands it provides. Verify the required skills and commands are available in the consumer repository before compiling.
 
 ## Quick start
 

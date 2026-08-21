@@ -14,7 +14,7 @@ source. This skill is self-contained. Read reference files in `references/` with
 
 ## Prerequisites
 
-Install and configure `PlainConceptsPlatform/opencode-onboard` in the consumer repository first.
+Install and configure `PlainConceptsPlatform/agent-harness` in the consumer repository first.
 Workers invoke skills and commands it provides. Before compilation, verify worker-required skills and
 commands exist locally.
 

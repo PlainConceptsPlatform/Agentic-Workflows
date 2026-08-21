@@ -276,7 +276,7 @@ timeout-minutes: 40
    - On a `${{ env.RESPONSE_MODE }}` pass, incorporate only the supplied answers from the issue author or an
      assignee. Do not use answers from other commenters.
 
-3. Explore before you write. Call skill("ob-plan-explore") and hold its stance for this step:
+3. Explore before you write. Call skill("pc-plan-explore") and hold its stance for this step:
    read-only, no plans, no files, no branches. You are only building understanding here, never
    producing artifacts.
 
@@ -336,7 +336,7 @@ timeout-minutes: 40
 
 5. Before writing the story, verify coverage: list every work unit and confirm each one has
    exploration findings concrete enough for acceptance criteria. If any unit is missing, go back
-   and explore it now. Then call skill("ob-plan-story") and run `/plan-story` for the issue,
+   and explore it now. Then call skill("pc-plan-story") and run `/plan-story` for the issue,
    passing everything you learned while exploring as the exploration findings. Ground the story
    in the actual codebase by reading the relevant files. Never read outside this repository root.
    When the issue held several work units, combine them into a single user story that covers all
@@ -386,7 +386,7 @@ flowchart TD
     refPick -.->|no| refIdle
     refReserve("Reserve<br/>bot-working") --> refFacts
     refFacts("Facts<br/>Issue and comments to disk") --> refExplore
-    refExplore("Explore<br/>ob-plan-explore per work unit,<br/>self-answer, bounded") --> refClassify
+    refExplore("Explore<br/>pc-plan-explore per work unit,<br/>self-answer, bounded") --> refClassify
     refClassify{"Trivial change?"}
     refClassify -->|yes: trivial path| refTrivial
     refClassify -->|no: standard path| refStory

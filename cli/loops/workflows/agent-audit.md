@@ -120,7 +120,7 @@ safe-outputs:
 timeout-minutes: 45
 ---
 
-1. Call skill("ob-repo-audit"), then run `/repo-audit` as a read-only audit of this
+1. Call skill("pc-repo-audit"), then run `/repo-audit` as a read-only audit of this
    repository. Do not modify any file, do not commit, and do not push.
 
   2. Apply repository documentation and established conventions while auditing. Focus on
@@ -156,7 +156,7 @@ timeout-minutes: 45
    **Section 1 , All findings:** A numbered list of every finding (5-7) with its score,
    file path, and a one-line description. Order by score descending.
 
-   **Section 2 , Top 3 to implement:** Call skill("ob-plan-story") and refine the top 3
+   **Section 2 , Top 3 to implement:** Call skill("pc-plan-story") and refine the top 3
    findings by score into user stories in Mike Cohn's As a / I want to / so that format
    with Given/When/Then acceptance criteria, edge cases, and likely files to change. Mark
    this section clearly with a heading like `## Top 3 , To Implement`.
