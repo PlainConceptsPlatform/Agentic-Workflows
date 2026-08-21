@@ -65,8 +65,12 @@ assert_route "implement label routes to implement" implement \
   EVENT=issues ACTION=labeled LABEL=implement EVENT_ISSUE_NUMBER=42
 assert_route "unrelated label routes nowhere" none \
   EVENT=issues ACTION=labeled LABEL=documentation EVENT_ISSUE_NUMBER=42
-assert_route "a non-label issue action routes nowhere" none \
+assert_route "a non-label issue action routes to triage" triage \
   EVENT=issues ACTION=opened EVENT_ISSUE_NUMBER=42
+assert_route "a human triage label routes to triage" triage \
+  EVENT=issues ACTION=labeled LABEL=triage ACTOR=maintainer EVENT_ISSUE_NUMBER=42
+assert_route "a bot triage label routes nowhere" none \
+  EVENT=issues ACTION=labeled LABEL=triage ACTOR=platform-devbox[bot] EVENT_ISSUE_NUMBER=42
 assert "refine label starts a first pass" first \
   "$(route_field refine-mode EVENT=issues ACTION=labeled LABEL=refine EVENT_ISSUE_NUMBER=42)"
 assert_route "direct label routes to direct" direct \
@@ -98,6 +102,15 @@ assert "a direct reply is a continue pass" continue \
 assert_route "the bot's own comment never re-enters direct" none \
   EVENT=issue_comment COMMENT_ON_PR=false COMMENT_SENDER_TYPE=Bot \
   'ISSUE_LABELS=["direct"]' EVENT_ISSUE_NUMBER=42
+assert_route "a comment on a triage issue re-triages" triage \
+  EVENT=issue_comment COMMENT_ON_PR=false COMMENT_SENDER_TYPE=User \
+  'ISSUE_LABELS=["triage"]' EVENT_ISSUE_NUMBER=42
+assert "a triage re-trigger is a retriage pass" retriage \
+  "$(route_field triage-mode EVENT=issue_comment COMMENT_ON_PR=false \
+    COMMENT_SENDER_TYPE=User 'ISSUE_LABELS=["triage"]' EVENT_ISSUE_NUMBER=42)"
+assert_route "the bot's own comment never re-enters triage" none \
+  EVENT=issue_comment COMMENT_ON_PR=false COMMENT_SENDER_TYPE=Bot \
+  'ISSUE_LABELS=["triage"]' EVENT_ISSUE_NUMBER=42
 
 echo "── Review events ─────────────────────────────────────────────────────────"
 assert_route "a review comment routes to apply-review" apply-review \
@@ -142,6 +155,12 @@ assert_route "direct dispatch accepts a positive issue" direct \
   EVENT=workflow_dispatch OPERATION=direct INPUT_ISSUE_NUMBER=42
 assert_route "direct dispatch needs an issue number" none \
   EVENT=workflow_dispatch OPERATION=direct INPUT_ISSUE_NUMBER=
+assert_route "triage dispatch accepts a positive issue" triage \
+  EVENT=workflow_dispatch OPERATION=triage INPUT_ISSUE_NUMBER=42
+assert_route "triage dispatch needs an issue number" none \
+  EVENT=workflow_dispatch OPERATION=triage INPUT_ISSUE_NUMBER=
+assert "triage dispatch defaults to first pass" first \
+  "$(route_field triage-mode EVENT=workflow_dispatch OPERATION=triage INPUT_ISSUE_NUMBER=42)"
 assert_route "merge-gate dispatch needs a pull request number" none \
   EVENT=workflow_dispatch OPERATION=merge-gate INPUT_PR_NUMBER=0
 assert_route "merge-gate dispatch accepts a positive pull request" merge-gate \
@@ -185,7 +204,18 @@ for route in refine implement direct apply-review; do
   fi
 done
 
-for route in refine implement direct apply-review merge-gate audit propose bot-approve \
+# Triage runs under a trusted App identity. Outside collaborators are admitted only to
+# the deterministic dispatcher; the worker call itself requires a trusted actor.
+if grep -qE "dispatch-triage:.*" "$ROUTER_YML" && \
+   grep -qE "route == 'triage'.*is_outside_collaborator == 'true'" "$ROUTER_YML" && \
+   grep -qE "route == 'triage'.*trusted == 'true'" "$ROUTER_YML"; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL: route 'triage' does not dispatch outside collaborators and require a trusted worker actor" >&2
+fi
+
+for route in refine implement direct triage apply-review merge-gate audit propose bot-approve \
   audit-close cleanup-artifacts reconcile-bot-pr-runs stale-recovery validate; do
   if grep -q "route == '${route}'" "$ROUTER_YML"; then
     PASS=$((PASS + 1))

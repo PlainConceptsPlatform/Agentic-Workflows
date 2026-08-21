@@ -30,6 +30,9 @@ outputs:
   direct-mode:
     description: first or continue.
     value: ${{ steps.classify.outputs.direct-mode }}
+  triage-mode:
+    description: first or retriage.
+    value: ${{ steps.classify.outputs.triage-mode }}
   trigger-kind:
     description: scheduled or manual.
     value: ${{ steps.classify.outputs.trigger-kind }}

@@ -34,6 +34,8 @@ runs:
             number: issue.data.number,
             title: issue.data.title,
             body: issue.data.body,
+            author: issue.data.user.login,
+            authorAssociation: issue.data.author_association,
             labels: issue.data.labels.map(({ name }) => name),
             comments: comments.map(({ user, author_association, body }) => ({
               author: user.login,

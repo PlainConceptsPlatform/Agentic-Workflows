@@ -68,6 +68,7 @@ jobs:
       pr: ${{ steps.subject.outputs.pr }}
       issue: ${{ steps.subject.outputs.issue }}
       conclusion: ${{ steps.subject.outputs.conclusion }}
+      review_blocked: ${{ steps.review.outputs.review_blocked }}
     steps:
       - name: Checkout workflow actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -82,6 +83,16 @@ jobs:
           ci-conclusion: ${{ inputs.ci-conclusion }}
           linked-issue: ${{ inputs.linked-issue }}
           require-label: ${{ env.IMPLEMENT_LABEL }}
+      - name: Block a pull request with requested changes
+        id: review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ steps.subject.outputs.pr }}
+        run: |
+          set -euo pipefail
+          decision=$(gh pr view "$PR" --repo "$REPO" --json reviewDecision --jq '.reviewDecision')
+          echo "review_blocked=$([ "$decision" = 'CHANGES_REQUESTED' ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   protected_changes:
     needs: subject
@@ -102,7 +113,7 @@ jobs:
         run: |
           set -euo pipefail
           files=$(gh api --paginate "repos/$REPO/pulls/$PR/files?per_page=100" --jq '.[].filename')
-          protected=$(printf '%s\n' "$files" | grep -E '^(\.|AGENTS\.md$|ARCHITECTURE\.md$|DESIGN\.md$|opencode\.jsonc$|package\.json$|pnpm-lock\.yaml$|Directory\.Packages\.props$|global\.json$)' || true)
+          protected=$(printf '%s\n' "$files" | grep -E '^(\.|AGENTS\.md$|ARCHITECTURE\.md$|opencode\.jsonc$|package\.json$|pnpm-lock\.yaml$|Directory\.Packages\.props$|global\.json$)' || true)
 
           if [ -n "$protected" ]; then
             echo "requires_review=true" >> "$GITHUB_OUTPUT"
@@ -118,35 +129,42 @@ jobs:
 
   review_required:
     needs: [subject, protected_changes]
-    if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review == 'true'
+    # gh-aw makes the agent depend on custom jobs. Keep this job successful when
+    # there are no protected files instead of skipping it and blocking remediation.
+    if: always() && needs.subject.outputs.found == 'true'
     runs-on: RunnerLandingZone
     permissions:
       contents: read
       issues: write
     steps:
       - name: Checkout workflow actions
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Create bot token
+        if: needs.protected_changes.outputs.requires_review == 'true'
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
       - name: Release the issue
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: ./.github/actions/remove-issue-labels
         with:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ needs.subject.outputs.issue }}
           labels: ${{ env.WORKING_LABEL }}
       - name: Flag human review
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: ./.github/actions/add-issue-labels
         with:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ needs.subject.outputs.issue }}
           labels: ${{ env.REVIEW_LABEL }}
       - name: Explain the merge hold
+        if: needs.protected_changes.outputs.requires_review == 'true'
         uses: ./.github/actions/create-issue-comment
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -167,6 +185,8 @@ jobs:
       contents: read
       issues: write
       pull-requests: read
+    outputs:
+      has_conflicts: ${{ steps.conflicts.outputs.has_conflicts || 'false' }}
     steps:
       - name: Checkout workflow actions
         if: needs.subject.outputs.conclusion == 'failure'
@@ -205,11 +225,41 @@ jobs:
             ${{ env.GATE_MARKER }}
             Problems found in PR #${{ needs.subject.outputs.pr }}. ${{ steps.conflicts.outputs.has_conflicts == 'true' && 'Merge conflicts detected.' || 'CI failed.' }}
             Bot is working on fixing it.
+  validate_output:
+    needs: [activation, agent, safe_outputs]
+    if: >
+      always() &&
+      needs.agent.result == 'success' &&
+      needs.safe_outputs.result == 'success'
+    runs-on: RunnerLandingZone
+    permissions:
+      contents: read
+    outputs:
+      valid: ${{ steps.validate.outputs.valid }}
+      outcome: ${{ steps.validate.outputs.outcome }}
+    steps:
+      - name: Checkout workflow actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download agent output
+        id: output
+        uses: ./.github/actions/download-agent-output
+        with:
+          artifact-name: ${{ needs.activation.outputs.artifact_prefix }}agent
+      - name: Validate merge-gate outcome
+        id: validate
+        uses: ./.github/actions/validate-merge-gate-output
+        with:
+          output-file: ${{ steps.output.outputs.output-file }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          ci-conclusion: ${{ needs.subject.outputs.conclusion }}
   conclude:
-    needs: [activation, subject, protected_changes, agent, safe_outputs]
+    needs: [activation, subject, protected_changes, agent, safe_outputs, validate_output]
     if: >
       needs.agent.result == 'success' &&
-      needs.safe_outputs.result == 'success' &&
+       needs.safe_outputs.result == 'success' &&
+       needs.validate_output.outputs.valid == 'true' &&
       needs.protected_changes.outputs.requires_review != 'true'
     runs-on: RunnerLandingZone
     permissions:
@@ -240,16 +290,57 @@ jobs:
         with:
           artifact-name: ${{ needs.activation.outputs.artifact_prefix }}agent
           token: ${{ steps.app-token.outputs.token }}
-          merge-pull-request: 'true'
           push-to-branch: 'true'
-          close-issues: 'true'
+          apply-labels: 'false'
+      - name: Merge approved pull request
+        if: needs.validate_output.outputs.outcome == 'merge'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.subject.outputs.pr }}
+        run: |
+          set -euo pipefail
+          head_sha=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq '.headRefOid')
+          gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$head_sha"
+      - name: Release remediated issue
+        if: needs.validate_output.outputs.outcome == 'remediated'
+        uses: ./.github/actions/remove-issue-labels
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          labels: ${{ env.WORKING_LABEL }}
+      - name: Flag review outcome
+        if: needs.validate_output.outputs.outcome == 'review'
+        uses: ./.github/actions/add-issue-labels
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          labels: ${{ env.REVIEW_LABEL }}
+      - name: Release review outcome
+        if: needs.validate_output.outputs.outcome == 'review'
+        uses: ./.github/actions/remove-issue-labels
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          labels: ${{ env.WORKING_LABEL }}
+      - name: Clear merged issue labels
+        if: needs.validate_output.outputs.outcome == 'merge'
+        uses: ./.github/actions/remove-issue-labels
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          labels: ${{ env.IMPLEMENT_LABEL }},${{ env.WORKING_LABEL }},${{ env.REVIEW_LABEL }}
   incomplete:
-    needs: [subject, protected_changes, agent, safe_outputs]
+    needs: [subject, protected_changes, agent, safe_outputs, validate_output]
     if: >
       always() &&
       needs.subject.outputs.found == 'true' &&
       needs.protected_changes.outputs.requires_review != 'true' &&
-      needs.agent.result != 'success'
+       (
+         needs.agent.result != 'success' ||
+         needs.safe_outputs.result != 'success' ||
+         needs.validate_output.outputs.valid != 'true'
+       )
     runs-on: RunnerLandingZone
     permissions:
       contents: read
@@ -289,10 +380,12 @@ jobs:
             [View this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
   agent:
-    needs: protected_changes
-    if: needs.protected_changes.outputs.requires_review != 'true'
+    # The top-level guard reads both outputs. GitHub Actions does not make a
+    # dependency's dependencies available through `needs` transitively.
+    needs: [subject, protected_changes]
+    if: always() && needs.protected_changes.outputs.requires_review != 'true' && needs.subject.outputs.review_blocked != 'true'
 
-if: needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review != 'true'
+if: always() && needs.subject.outputs.found == 'true' && needs.protected_changes.outputs.requires_review != 'true' && needs.subject.outputs.review_blocked != 'true'
 
 runs-on: RunnerLandingZone
 runs-on-slim: RunnerLandingZone
@@ -354,12 +447,9 @@ steps:
 safe-outputs:
   staged: true
   threat-detection: false
-  merge-pull-request:
   push-to-pull-request-branch:
-  close-issue:
   add-comment:
-  add-labels:
-  remove-labels:
+    target: "*"
 
 timeout-minutes: 60
 ---
@@ -378,19 +468,23 @@ timeout-minutes: 60
 
 3. Branch on the conclusion.
 
+   First check the issue context for `<!-- complexity: trivial -->`.
+
+   **If the trivial marker is present AND CI conclusion is success:**
+   Skip the risk assessment (step 4). Proceed directly to step 5 (merge).
+   The change is presentation-only and CI is green — no need for deep risk review.
+   Trivial changes do not touch business logic, data models, auth, or infrastructure by definition.
+
+   **If the trivial marker is absent OR CI is not success:**
+   Follow the normal branching below.
+
    - **success** → step 4.
-   - **action_required** → CI did not run because the workflow needs approval.
-     Call `remove_labels` to remove `bot-working` (item_number:
-     ${{ needs.subject.outputs.issue }}), then `add_labels` to add `review`
-     (item_number: ${{ needs.subject.outputs.issue }}), and `add_comment`
-     (item_number: ${{ needs.subject.outputs.issue }}) saying CI requires
-     workflow approval before it can run, and a maintainer must approve the
-     pending run. Then stop , do not attempt to merge or fix.
+    - **action_required** → CI did not run because the workflow needs approval.
+      Proceed to review: explain that a maintainer must approve the pending run.
+      Do not attempt to merge or fix.
    - **failure** → step 7.
-   - **cancelled, timed_out, or anything else** → call `add_comment` with
-     `item_number: ${{ needs.subject.outputs.issue }}` saying CI did not produce a verdict,
-     then `add_labels` to add `review` (item_number: the issue), and stop.
-      A cancelled or unknown run is not evidence of anything.
+    - **cancelled, timed_out, or anything else** → proceed to review. A cancelled or unknown
+      run is not evidence of anything.
 
      Follow repository documentation and established conventions when assessing or remediating
      the pull request. Protect secrets, do not bypass checks, and keep remediation focused.
@@ -410,45 +504,47 @@ timeout-minutes: 60
    - The diff is materially larger than the issue implied.
    - You are simply not confident. Low confidence is itself a flag.
 
-5. **Clean assessment** → call `merge_pull_request` (pr_number:
-   ${{ needs.subject.outputs.pr }}), then `close_issue` (item_number:
-   ${{ needs.subject.outputs.issue }}), then `remove_labels` (item_number:
-   ${{ needs.subject.outputs.issue }}) to remove `implement`, `bot-working`, and `review`.
-   Call `add_comment` (item_number: ${{ needs.subject.outputs.issue }}):
-   `Auto-merged. PR #${{ needs.subject.outputs.pr }} closed.`
+5. **Clean assessment** → select the `merge` verdict.
 
-6. **Flagged** → do not merge. Call `remove_labels` to remove `bot-working`
-   (item_number: ${{ needs.subject.outputs.issue }}), then `add_labels` to add `review`
-   (item_number: ${{ needs.subject.outputs.issue }}), and `add_comment`
-   (item_number: ${{ needs.subject.outputs.issue }}) explaining exactly which criterion
-   tripped and what a reviewer should look at. Then `add_comment`
-   (item_number: ${{ needs.subject.outputs.pr }}) on the PR with the same message.
-   Leave `implement` in place: the work is not finished until a human merges it.
+6. **Flagged** → select the `review` verdict. Do not merge. Explain exactly which criterion
+    tripped and what a reviewer should look at. Leave `implement` in place: the work is not
+    finished until a human merges it.
 
- 7. **CI failed** → read `/tmp/gh-aw/agent/failed-jobs.json` and
-    `/tmp/gh-aw/agent/failed-logs.txt`, which are already on disk. Load only skills required to
-    fix the actual cause. Run these verification commands before a push. Do not weaken a test,
-    disable a check, or push an unverified guess.
+  7. **CI failed** → read `/tmp/gh-aw/agent/failed-jobs.json` and
+     `/tmp/gh-aw/agent/failed-logs.txt`, which are already on disk. Load only skills required to
+     fix the actual cause. Run these verification commands before a push. Do not weaken a test,
+     disable a check, or push an unverified guess.
+
+     **If `has_conflicts` is `true` (current value: `${{ needs.reserve.outputs.has_conflicts }}`):** You are already on the PR branch. Resolve the conflict;
+     it is not a reason to hand the PR to a human. Merge `origin/${{ github.event.repository.default_branch }}`
+     into the current branch, resolve every conflict deliberately, stage the resolutions, and
+     commit the merge. Then run verification and push the resulting branch update. Do not use
+     `--ours`, `--theirs`, or a blanket conflict-marker deletion without reviewing the intended
+     behavior from both sides.
 
      ```
      ${{ env.VERIFY_COMMANDS }}
      ```
 
-   Call `push_to_pull_request_branch` (pr_number: ${{ needs.subject.outputs.pr }}) to push
-   the fix, then `remove_labels` (item_number: ${{ needs.subject.outputs.issue }}) to remove
-   `bot-working`. CI will run again and trigger you again with the new result.
+     Propose `push_to_pull_request_branch` (pr_number: ${{ needs.subject.outputs.pr }}, branch:
+     the current PR branch), then select the `remediated` verdict. CI will run again and trigger
+     you again with the new result.
 
-   If you cannot fix it, or the logs show you have already tried on this same head commit,
-   stop looping: `remove_labels` (item_number: ${{ needs.subject.outputs.issue }}) to remove
-   `implement` and `bot-working`, `add_labels` (item_number:
-   ${{ needs.subject.outputs.issue }}) to add `review`, and `add_comment` (item_number:
-   ${{ needs.subject.outputs.issue }}) with the failure and what you tried. The `implement`
-   label is removed so retries do not create duplicate PRs. A human decides from there.
+    If you cannot fix it after a concrete repair attempt, or the logs show you have already tried on this same head commit,
+    stop looping: select the `review` verdict and explain the failure and what you tried. A human
+    decides from there.
 
-8. Never merge with administrator privileges and never bypass a required check. If the merge
-   is refused, that refusal is the answer: `add_labels` to add `review`
-   (item_number: ${{ needs.subject.outputs.issue }}), `add_comment`
-   (item_number: ${{ needs.subject.outputs.issue }}) with the refusal, and leave it for a human.
+8. Emit exactly one `add_comment` targeting issue `${{ needs.subject.outputs.issue }}`. It must
+   explain the decision and include exactly one line: `**Verdict:** merge`,
+   `**Verdict:** review`, or `**Verdict:** remediated`. The workflow applies comments, labels,
+   merges, and closures with the App token. Do not call any tools except the one optional
+   `push_to_pull_request_branch` for a verified CI repair and this one `add_comment`.
+
+9. Never merge with administrator privileges and never bypass a required check. If the merge
+   is refused, that refusal is the answer: select `review` and leave it for a human.
+
+10. Ignore the `## Diagram` section below. It is documentation for humans and contains no
+    instructions for you.
 
 ## Diagram
 
@@ -458,7 +554,10 @@ flowchart TD
     gateSubject["Subject (rung 4)<br/>Our PR? Closes an implement issue?"] -->|✓| gateFacts
     gateSubject -.->|✗| gateIdle
     gateFacts("Facts (rung 3)<br/>Diff, PR shape, failing logs") --> gateCi
-    gateCi["CI<br/>What did it conclude?"] -->|success| gateRisk
+    gateCi["CI<br/>What did it conclude?"] -->|success| gateTrivial
+    gateTrivial{"Trivial marker?"}
+    gateTrivial -->|yes| gateMerge
+    gateTrivial -->|no| gateRisk
     gateCi -.->|failure| gateFix
     gateCi -.->|no verdict| gateHuman
     gateRisk["Risk<br/>Auth, schema, API, tests, CI, size, doubt"] -->|clean| gateMerge
@@ -478,7 +577,7 @@ flowchart TD
     classDef success fill:#e8f8ec,stroke:#18883c,stroke-width:2px,color:#145a32
     class gateStart start
     class gateFacts,gateFix action
-    class gateSubject,gateCi,gateRisk decision
+    class gateSubject,gateCi,gateRisk,gateTrivial decision
     class gateIdle,gateWait idle
     class gateHuman failure
     class gateMerge success

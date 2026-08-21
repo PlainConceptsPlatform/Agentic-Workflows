@@ -4,6 +4,7 @@ import { constants } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { parse as parseYaml } from "yaml";
 
 import { catalogTemplates, mandatoryFiles, routeNames, templateNames, workflowRoutes, type CatalogTemplate, type RouteName, type TemplateName } from "./workflow-catalog.js";
 import { processRoutes, excludedWorkerFiles } from "./route-processing.js";
@@ -349,6 +350,43 @@ async function generatedFiles(repositoryPath: string): Promise<ContentUpdate[]> 
   return updates.sort((left, right) => left.target.localeCompare(right.target));
 }
 
+interface CompositeStep {
+  name?: string;
+  id?: string;
+  shell?: unknown;
+  run?: unknown;
+  env?: unknown;
+  uses?: unknown;
+  with?: unknown;
+}
+
+interface ActionManifest {
+  runs?: { using?: string; steps?: CompositeStep[] };
+}
+
+function validateActionManifests(updates: readonly ContentUpdate[]): void {
+  for (const { target, content } of updates) {
+    if (!target.endsWith("action.yml")) continue;
+    let manifest: ActionManifest;
+    try {
+      manifest = parseYaml(content) as ActionManifest;
+    } catch {
+      throw new Error(`${target}: invalid YAML — failed to parse action manifest`);
+    }
+    if (manifest?.runs?.using !== "composite") continue;
+    const steps = manifest.runs?.steps;
+    if (!Array.isArray(steps) || steps.length === 0) {
+      throw new Error(`${target}: composite action has no steps — file may be truncated`);
+    }
+    for (const [index, step] of steps.entries()) {
+      const label = step.name ?? step.id ?? `step ${index}`;
+      if (step.shell !== undefined && (typeof step.run !== "string" || step.run.trim() === "")) {
+        throw new Error(`${target}: step "${label}" has shell: but no run: — manifest is invalid or truncated`);
+      }
+    }
+  }
+}
+
 async function applyTransaction(repositoryPath: string, updates: readonly ContentUpdate[]): Promise<void> {
   const uniqueUpdates = [...new Map(updates.map((update) => [update.target, update])).values()];
   const rollback = await Promise.all(uniqueUpdates.map(async ({ target }) => {
@@ -358,6 +396,7 @@ async function applyTransaction(repositoryPath: string, updates: readonly Conten
 
   try {
     await writeUpdates(repositoryPath, uniqueUpdates);
+    validateActionManifests(uniqueUpdates);
   } catch (error) {
     await Promise.all(rollback.map(async ({ target, existed, content }) => {
       if (existed && content !== undefined) {

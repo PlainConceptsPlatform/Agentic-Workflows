@@ -140,11 +140,52 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ needs.subject.outputs.issue }}
           labels: ${{ env.REVIEW_LABEL }}
-  conclude:
+  validate_output:
     needs: [activation, subject, agent, safe_outputs]
+    if: always() && needs.agent.result == 'success' && needs.safe_outputs.result == 'success'
+    runs-on: RunnerLandingZone
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      valid: ${{ steps.validate.outputs.valid }}
+      outcome: ${{ steps.validate.outputs.outcome }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: output
+        uses: ./.github/actions/download-agent-output
+        with:
+          artifact-name: ${{ needs.activation.outputs.artifact_prefix }}agent
+      - name: Load unresolved review threads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.subject.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh api graphql -f query='
+            query($owner:String!, $name:String!, $number:Int!) {
+              repository(owner:$owner, name:$name) {
+                pullRequest(number:$number) {
+                  reviewThreads(first:100) { nodes { id isResolved isOutdated } }
+                }
+              }
+            }' -f owner="${REPO%/*}" -f name="${REPO#*/}" -F number="$PR" \
+            --jq '.data.repository.pullRequest.reviewThreads.nodes' > /tmp/review-threads.json
+      - id: validate
+        uses: ./.github/actions/validate-review-output
+        with:
+          output-file: ${{ steps.output.outputs.output-file }}
+          pr-number: ${{ needs.subject.outputs.pr }}
+          review-threads-file: /tmp/review-threads.json
+  conclude:
+    needs: [activation, subject, agent, safe_outputs, validate_output]
     if: >
       needs.agent.result == 'success' &&
-      needs.safe_outputs.result == 'success'
+      needs.safe_outputs.result == 'success' &&
+      needs.validate_output.outputs.valid == 'true'
     runs-on: RunnerLandingZone
     permissions:
       contents: write
@@ -168,12 +209,34 @@ jobs:
           artifact-name: ${{ needs.activation.outputs.artifact_prefix }}agent
           token: ${{ steps.app-token.outputs.token }}
           push-to-branch: 'true'
+          apply-labels: 'false'
+      - name: Release implemented review
+        if: needs.validate_output.outputs.outcome == 'implemented'
+        uses: ./.github/actions/remove-issue-labels
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          labels: ${{ env.WORKING_LABEL }}
+      - name: Flag review outcome
+        if: needs.validate_output.outputs.outcome != 'implemented'
+        uses: ./.github/actions/add-issue-labels
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          labels: ${{ env.REVIEW_LABEL }}
+      - name: Release review outcome
+        if: needs.validate_output.outputs.outcome != 'implemented'
+        uses: ./.github/actions/remove-issue-labels
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ needs.subject.outputs.issue }}
+          labels: ${{ env.WORKING_LABEL }}
   incomplete:
-    needs: [subject, agent, safe_outputs]
+    needs: [subject, agent, safe_outputs, validate_output]
     if: >
       always() &&
       needs.subject.outputs.found == 'true' &&
-      needs.agent.result != 'success'
+      (needs.agent.result != 'success' || needs.safe_outputs.result != 'success' || needs.validate_output.outputs.valid != 'true')
     runs-on: RunnerLandingZone
     permissions:
       contents: read
@@ -262,8 +325,8 @@ steps:
         query($owner:String!, $name:String!, $number:Int!) {
           repository(owner:$owner, name:$name) {
             pullRequest(number:$number) {
-              reviewThreads(first:100) {
-                nodes {
+                  reviewThreads(first:100) {
+                  nodes { id
                   isResolved isOutdated path
                   comments(first:50) { nodes { author { login } body } }
                 }
@@ -280,8 +343,7 @@ safe-outputs:
   threat-detection: false
   push-to-pull-request-branch:
   add-comment:
-  add-labels:
-  remove-labels:
+    target: "*"
 
 
 timeout-minutes: 45
@@ -310,8 +372,9 @@ timeout-minutes: 45
 
 4. Work out which items are genuinely actionable and still outstanding. Skip anything already
    addressed by a later commit, anything a bot wrote, anything from the pull request author,
-   and anything that is a question rather than a request. If nothing is actionable, call
-   `add_labels` to add `${{ env.REVIEW_LABEL }}`, then call `add_comment` saying so and stop.
+   and anything that is a question rather than a request. You must account for every unresolved
+   human review thread by its `PRRT_...` ID. Do not claim feedback was implemented when no branch
+   change is needed: that requires reviewer confirmation.
 
  5. Load only skills required by the feedback, then apply it. Make only changes the feedback
     justifies: a review comment is not licence for unrelated refactoring. Never read outside this
@@ -327,17 +390,24 @@ timeout-minutes: 45
      ${{ env.VERIFY_COMMANDS }}
      ```
 
-7. Call `push_to_pull_request_branch` to push the verified changes. Do not merge, do not
-   close anything, and do not change any label other than `bot-working`.
+7. Select one review outcome.
 
-8. Call `add_comment` once:
-   `Feedback implemented. Please review and merge when ready.`
-   followed by a short list of what you changed and, if anything was deliberately not changed,
-   which item and why.
+   - **implemented**: You made the requested change, verification passed, and you will propose
+     exactly one `push_to_pull_request_branch`.
+   - **already-satisfied**: The current branch already satisfies the request. Do not push; the
+     reviewer must confirm this assessment.
+   - **needs-human**: The feedback is ambiguous, unsafe, or cannot be applied. Do not push.
 
-9. Call `remove_labels` to remove `bot-working`. If you failed, call `add_labels` to add
-   `${{ env.REVIEW_LABEL }}`, then say so in the comment rather than leaving the pull request
-   looking untouched.
+8. Emit exactly one `add_comment` on PR `${{ needs.subject.outputs.pr }}`. Include every
+   unresolved human review thread ID and an explanation for it, then exactly one line:
+   `**Review outcome:** implemented`, `**Review outcome:** already-satisfied`, or
+   `**Review outcome:** needs-human`.
+
+9. Do not merge, close, or change labels. The workflow validates your outcome and owns those
+   state transitions.
+
+10. Ignore the `## Diagram` section below. It is documentation for humans and contains no
+    instructions for you.
 
 ## Diagram
 

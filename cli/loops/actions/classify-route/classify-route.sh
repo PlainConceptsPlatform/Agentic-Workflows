@@ -11,7 +11,7 @@ set -euo pipefail
 readonly AUDIT_CRON="17 1 * * 1"
 readonly AUDIT_CLOSE_CRON="43 3 * * *"
 readonly CLEANUP_ARTIFACTS_CRON="0 6 * * *"
-readonly RECONCILE_BOT_PR_RUNS_CRON="*/30 * * * *"
+readonly RECONCILE_BOT_PR_RUNS_CRON="17 */2 * * *"
 # Daily, but it proposes far less often than daily: the worker holds one open
 # proposal at a time and skips while that slot is filled. The cron is a heartbeat,
 # the queue is the pacing.
@@ -28,11 +28,18 @@ is_issue_number() {
 classify_route() {
   local route="none" error=""
   local issue_number="" pr_number="" ci_conclusion="" ci_run_id=""
-  local refine_mode="" direct_mode="" trigger_kind=""
+  local refine_mode="" direct_mode="" triage_mode="" trigger_kind=""
 
   case "${EVENT:-}" in
     issues)
-      if [ "${ACTION:-}" = "labeled" ]; then
+      if [ "${ACTION:-}" = "opened" ]; then
+        # Issue opened by an outside collaborator → triage. The authorize job
+        # gates the caller on is_outside_collaborator; this routes unconditionally
+        # so write+ openers classify to triage but the caller job skips them.
+        route="triage"
+        triage_mode="first"
+        issue_number="${EVENT_ISSUE_NUMBER:-}"
+      elif [ "${ACTION:-}" = "labeled" ]; then
         case "${LABEL:-}" in
           bot-working)
             # Bot adds bot-working → route based on which work label is present
@@ -52,6 +59,20 @@ classify_route() {
               issue_number="${EVENT_ISSUE_NUMBER:-}"
             else
               error="bot-working added but no work label (implement/refine/direct) found"
+            fi
+            ;;
+          triage)
+            # A maintainer can explicitly re-run triage by adding this label. The
+            # triage worker adds it after claiming the issue, so bot label events
+            # and an existing claim must not start a second worker.
+            if [ "${ACTOR:-}" != "" ] && echo "${ACTOR:-}" | grep -q '\[bot\]$'; then
+              error="bot-added triage label does not re-trigger triage"
+            elif has_label bot-working; then
+              error="issue already has bot-working label; triage already in progress"
+            else
+              route="triage"
+              issue_number="${EVENT_ISSUE_NUMBER:-}"
+              triage_mode="first"
             fi
             ;;
           refine | implement | direct)
@@ -83,6 +104,10 @@ classify_route() {
         pr_number="${EVENT_ISSUE_NUMBER:-}"
       elif [ "${COMMENT_SENDER_TYPE:-}" = "Bot" ]; then
         error="comment authored by a bot"
+      elif has_label triage; then
+        route="triage"
+        triage_mode="retriage"
+        issue_number="${EVENT_ISSUE_NUMBER:-}"
       elif has_label implement; then
         error="issue has implement label; comments do not re-trigger implement"
       elif has_label direct; then
@@ -155,6 +180,15 @@ classify_route() {
             error="operation '${OPERATION}' needs a positive issue-number, got '${INPUT_ISSUE_NUMBER:-}'"
           fi
           ;;
+        triage)
+          if is_issue_number "${INPUT_ISSUE_NUMBER:-}"; then
+            route="triage"
+            issue_number="${INPUT_ISSUE_NUMBER}"
+            triage_mode="${INPUT_MODE:-first}"
+          else
+            error="operation 'triage' needs a positive issue-number, got '${INPUT_ISSUE_NUMBER:-}'"
+          fi
+          ;;
         apply-review)
           if is_issue_number "${INPUT_PR_NUMBER:-}"; then
             route="apply-review"
@@ -199,6 +233,7 @@ ci-conclusion=${ci_conclusion}
 ci-run-id=${ci_run_id}
 refine-mode=${refine_mode}
 direct-mode=${direct_mode}
+triage-mode=${triage_mode}
 trigger-kind=${trigger_kind}
 error=${error}
 EOF

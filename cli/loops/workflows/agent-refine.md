@@ -11,6 +11,7 @@ env:
   INITIAL_MODE: first
   RESPONSE_MODE: rerefine
   MAX_SELF_QUESTIONS: "5"
+  TRIVIAL_MARKER: "<!-- complexity: trivial -->"
   INCOMPLETE_COMMENT: "Automated refinement ended without an outcome. The refine label remains for a retry."
   SAFE_OUTPUT_COMMENT_PREFIX: "Refinement update"
   ISSUE_CONTEXT_PATH: /tmp/gh-aw/agent/issue-context.json
@@ -304,7 +305,36 @@ timeout-minutes: 40
    longer changes your understanding. This exploration is internal working: never write your
    self-asked questions or their answers to the issue.
 
-4. Before writing the story, verify coverage: list every work unit and confirm each one has
+4. **Classify the change complexity.** Based on your exploration, determine whether this is a
+   trivial change. A change is **trivial** if ALL of these are true:
+
+   - It touches 1-3 files: CSS, Tailwind classes, text labels, markup, or styling only
+   - No business logic: no services, controllers, domain models, calculations, validations
+   - No data model: no entities, migrations, DTOs, API contracts
+   - No security surface: no auth, authorization, secrets, tokens, permissions
+   - No infrastructure: no Bicep, Docker, CI, deploy configuration
+   - No cross-cutting: doesn't touch shared libraries or multi-team contracts
+
+   If ALL pass → **trivial path** (step 4a). If ANY fail → **standard path** (step 5).
+
+   **4a. Trivial path.** Skip `/plan-story`. Do not write Gherkin acceptance criteria or
+   Mermaid diagrams. Instead, prepare the replacement issue body as valid Markdown:
+
+   1. `${{ env.TRIVIAL_MARKER }}`
+   2. A short plain-English summary of what needs to change and why (2-3 sentences max)
+   3. A simple checklist of concrete steps:
+      ```
+      ## Tasks
+      - [ ] Change X in file Y
+      - [ ] Verify Z
+      ```
+
+   No "As a / I want / so that" form. No Given/When/Then. No Mermaid. Just the marker,
+   the summary, and the checklist.
+
+   Load `@humanizer` and prepare the replacement issue body, then go directly to step 6.
+
+5. Before writing the story, verify coverage: list every work unit and confirm each one has
    exploration findings concrete enough for acceptance criteria. If any unit is missing, go back
    and explore it now. Then call skill("pc-plan-story") and run `/plan-story` for the issue,
    passing everything you learned while exploring as the exploration findings. Ground the story
@@ -322,6 +352,11 @@ timeout-minutes: 40
 6. Decide exactly one outcome:
 
     Labels are workflow-owned state. Do not call `add_labels` or `remove_labels`.
+
+    **Do not probe safe-output tools.** Never call `update_issue` or `add_comment` with
+    empty or test arguments — each safe-output type has a per-run limit of 1 call, and a
+    probe call consumes that quota. Call a safe-output tool exactly once, with the full
+    final payload, when you are ready to commit to the outcome.
 
     **Questions remain.** You set aside one or more questions for the author that the codebase
     could not answer. Leave the body unchanged. Call `add_comment` once with:
@@ -351,7 +386,11 @@ flowchart TD
     refPick -.->|no| refIdle
     refReserve("Reserve<br/>bot-working") --> refFacts
     refFacts("Facts<br/>Issue and comments to disk") --> refExplore
-    refExplore("Explore<br/>pc-plan-explore per work unit,<br/>self-answer, bounded") --> refStory
+    refExplore("Explore<br/>pc-plan-explore per work unit,<br/>self-answer, bounded") --> refClassify
+    refClassify{"Trivial change?"}
+    refClassify -->|yes: trivial path| refTrivial
+    refClassify -->|no: standard path| refStory
+    refTrivial("Trivial plan<br/>marker + summary + checklist") -->|✓| refProse
     refStory("Story<br/>/plan-story, grounded in the code") -->|✓| refProse
     refStory -.->|✗| refFail
     refProse("Prose<br/>@humanizer over the final text") -->|✓| refOutcome
@@ -371,8 +410,8 @@ flowchart TD
     classDef success fill:#e8f8ec,stroke:#18883c,stroke-width:2px,color:#145a32
 
     class refStart start
-    class refReserve,refFacts,refExplore,refStory,refProse action
-    class refPick,refOutcome decision
+    class refReserve,refFacts,refExplore,refStory,refTrivial,refProse action
+    class refPick,refOutcome,refClassify decision
     class refIdle idle
     class refFail failure
     class refDone,refAsk success
